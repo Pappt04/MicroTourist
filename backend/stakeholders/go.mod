@@ -1,4 +1,4 @@
-module fapiwani/stakeholders
+module microtourist/stakeholders
 
 go 1.22
 
