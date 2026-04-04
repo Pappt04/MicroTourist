@@ -29,3 +29,6 @@ CLAUDE.md
 .env.*
 !.env.example
 backend/stakeholders/stakeholders
+backend/blog/__pycache__/middleware.cpython-312.pyc
+.gitignore
+backend/blog/__pycache__/db.cpython-312.pyc

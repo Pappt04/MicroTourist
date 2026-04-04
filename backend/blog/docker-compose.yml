@@ -1,0 +1,26 @@
+services:
+  mongo:
+    image: mongo:7-jammy
+    volumes:
+      - mongodata:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: "none"
+
+  blog:
+    build: .
+    ports:
+      - "${PORT}:8081"
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB: ${MONGO_DB}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongodata:
