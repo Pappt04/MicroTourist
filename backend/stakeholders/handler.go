@@ -19,7 +19,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /register", s.handleRegister)
 	mux.HandleFunc("POST /login", s.handleLogin)
 	mux.HandleFunc("GET /me", s.handleMe)
-	return mux
+	return loggingMiddleware(mux)
 }
 
 // POST /register

@@ -13,9 +13,9 @@ func initDB() (*sql.DB, error) {
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		getenv("DB_HOST", "localhost"),
 		getenv("DB_PORT", "5432"),
-		getenv("DB_USER", "stakeholders"),
-		getenv("DB_PASSWORD", "stakeholders"),
-		getenv("DB_NAME", "stakeholders"),
+		getenv("DB_USER", "postgres"),
+		getenv("DB_PASSWORD", "postgres"),
+		getenv("DB_NAME", "microtourist-stakeholders"),
 	)
 
 	db, err := sql.Open("postgres", connStr)

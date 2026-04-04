@@ -22,11 +22,11 @@ func main() {
 	}
 	log.Println("database migration OK")
 
-	srv := &server{db: db}
+	server := &server{db: db}
 
 	httpServer := &http.Server{
 		Addr:         ":8080",
-		Handler:      srv.routes(),
+		Handler:      server.routes(),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
