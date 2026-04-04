@@ -23,3 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 CLAUDE.md
+
+# Environment files
+.env
+.env.*
+!.env.example
+backend/stakeholders/stakeholders
