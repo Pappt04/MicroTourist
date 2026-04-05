@@ -1,0 +1,61 @@
+services:
+
+  # ── databases ────────────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${STAKEHOLDERS_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${STAKEHOLDERS_DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${STAKEHOLDERS_DB_NAME:-microtourist-stakeholders}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${STAKEHOLDERS_DB_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mongo:
+    image: mongo:7-jammy
+    volumes:
+      - mongodata:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: "none"
+
+  # ── services ─────────────────────────────────────────────────────────────────
+
+  stakeholders:
+    build: ./backend/stakeholders
+    ports:
+      - "${STAKEHOLDERS_PORT:-8080}:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${STAKEHOLDERS_DB_USER:-postgres}
+      DB_PASSWORD: ${STAKEHOLDERS_DB_PASSWORD:-postgres}
+      DB_NAME: ${STAKEHOLDERS_DB_NAME:-microtourist-stakeholders}
+      TOKEN_SECRET: ${TOKEN_SECRET:-dev-secret-change-me}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  blog:
+    build: ./backend/blog
+    ports:
+      - "${BLOG_PORT:-8081}:8081"
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB: ${MONGO_DB:-microtourist_blog}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  mongodata:
