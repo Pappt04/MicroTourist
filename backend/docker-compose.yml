@@ -5,13 +5,13 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${STAKEHOLDERS_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${STAKEHOLDERS_DB_PASSWORD:-postgres}
-      POSTGRES_DB: ${STAKEHOLDERS_DB_NAME:-microtourist-stakeholders}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${STAKEHOLDERS_DB_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -37,8 +37,8 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USER: ${STAKEHOLDERS_DB_USER:-postgres}
-      DB_PASSWORD: ${STAKEHOLDERS_DB_PASSWORD:-postgres}
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       DB_NAME: ${STAKEHOLDERS_DB_NAME:-microtourist-stakeholders}
       TOKEN_SECRET: ${TOKEN_SECRET:-dev-secret-change-me}
     depends_on:
@@ -54,6 +54,21 @@ services:
       MONGO_DB: ${MONGO_DB:-microtourist_blog}
     depends_on:
       mongo:
+        condition: service_healthy
+
+  purchase:
+    build: ./backend/purchase
+    ports:
+      - "${PURCHASE_PORT:-8082}:8082"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_NAME: ${PURCHASE_DB_NAME:-microtourist-purchase}
+      TOKEN_SECRET: ${TOKEN_SECRET:-dev-secret-change-me}
+    depends_on:
+      postgres:
         condition: service_healthy
 
 volumes:
