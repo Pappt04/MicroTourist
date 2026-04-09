@@ -9,10 +9,15 @@ const (
 )
 
 type Account struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Role     Role   `json:"role"`
+	ID        int    `json:"id"`
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	Role      Role   `json:"role"`
+	IsBlocked bool   `json:"is_blocked"`
+}
+
+type BlockRequest struct {
+	Blocked bool `json:"blocked"`
 }
 
 type RegisterRequest struct {

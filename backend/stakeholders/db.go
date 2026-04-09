@@ -37,8 +37,10 @@ func migrate(db *sql.DB) error {
 			email         VARCHAR(100) UNIQUE NOT NULL,
 			password_hash VARCHAR(255) NOT NULL,
 			role          VARCHAR(20)  NOT NULL
-				CHECK (role IN ('guide', 'tourist', 'administrator'))
+				CHECK (role IN ('guide', 'tourist', 'administrator')),
+			is_blocked    BOOLEAN      NOT NULL DEFAULT FALSE
 		);
+		ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_blocked BOOLEAN NOT NULL DEFAULT FALSE;
 		CREATE TABLE IF NOT EXISTS profiles (
 			account_id      INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
 			first_name      VARCHAR(100) NOT NULL DEFAULT '',
@@ -56,9 +58,9 @@ func createAccount(db *sql.DB, username, email, passwordHash string, role Role) 
 	err := db.QueryRow(
 		`INSERT INTO accounts (username, email, password_hash, role)
 		 VALUES ($1, $2, $3, $4)
-		 RETURNING id, username, email, role`,
+		 RETURNING id, username, email, role, is_blocked`,
 		username, email, passwordHash, string(role),
-	).Scan(&a.ID, &a.Username, &a.Email, &a.Role)
+	).Scan(&a.ID, &a.Username, &a.Email, &a.Role, &a.IsBlocked)
 	if err != nil {
 		return nil, err
 	}
@@ -69,14 +71,47 @@ func getAccountByUsername(db *sql.DB, username string) (*Account, string, error)
 	var a Account
 	var hash string
 	err := db.QueryRow(
-		`SELECT id, username, email, role, password_hash
+		`SELECT id, username, email, role, is_blocked, password_hash
 		 FROM accounts WHERE username = $1`,
 		username,
-	).Scan(&a.ID, &a.Username, &a.Email, &a.Role, &hash)
+	).Scan(&a.ID, &a.Username, &a.Email, &a.Role, &a.IsBlocked, &hash)
 	if err != nil {
 		return nil, "", err
 	}
 	return &a, hash, nil
+}
+
+func getAllAccounts(db *sql.DB) ([]Account, error) {
+	rows, err := db.Query(`SELECT id, username, email, role, is_blocked FROM accounts ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var accounts []Account
+	for rows.Next() {
+		var a Account
+		if err := rows.Scan(&a.ID, &a.Username, &a.Email, &a.Role, &a.IsBlocked); err != nil {
+			return nil, err
+		}
+		accounts = append(accounts, a)
+	}
+	return accounts, rows.Err()
+}
+
+func setAccountBlocked(db *sql.DB, accountID int, blocked bool) error {
+	res, err := db.Exec(`UPDATE accounts SET is_blocked = $1 WHERE id = $2`, blocked, accountID)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func getProfileByAccountID(db *sql.DB, accountID int) (*Profile, error) {

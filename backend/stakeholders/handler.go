@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -21,6 +22,8 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("GET /me", s.handleMe)
 	mux.HandleFunc("GET /profile", s.handleGetProfile)
 	mux.HandleFunc("PUT /profile", s.handleUpdateProfile)
+	mux.HandleFunc("GET /admin/accounts", s.handleGetAllAccounts)
+	mux.HandleFunc("PUT /admin/accounts/{id}/block", s.handleBlockAccount)
 	return loggingMiddleware(mux)
 }
 
@@ -89,6 +92,11 @@ func (s *server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if account.IsBlocked {
+		writeError(w, http.StatusForbidden, "account is blocked")
+		return
+	}
+
 	token, err := generateToken(account)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not generate token")
@@ -150,7 +158,69 @@ func (s *server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, &profile)
 }
 
+// GET /admin/accounts  (requires administrator role)
+func (s *server) handleGetAllAccounts(w http.ResponseWriter, r *http.Request) {
+	if err := requireAdmin(r); err != nil {
+		writeError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	accounts, err := getAllAccounts(s.db)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not fetch accounts")
+		return
+	}
+
+	if accounts == nil {
+		accounts = []Account{}
+	}
+	writeJSON(w, http.StatusOK, accounts)
+}
+
+// PUT /admin/accounts/{id}/block  (requires administrator role)
+func (s *server) handleBlockAccount(w http.ResponseWriter, r *http.Request) {
+	if err := requireAdmin(r); err != nil {
+		writeError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	idStr := r.PathValue("id")
+	accountID, err := strconv.Atoi(idStr)
+	if err != nil || accountID <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid account id")
+		return
+	}
+
+	var req BlockRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := setAccountBlocked(s.db, accountID, req.Blocked); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "account not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "could not update account")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"id": accountID, "blocked": req.Blocked})
+}
+
 // ── helpers ──────────────────────────────────────────────────────────────────
+
+func requireAdmin(r *http.Request) error {
+	payload, err := bearerToken(r)
+	if err != nil {
+		return err
+	}
+	if payload.Role != RoleAdministrator {
+		return errors.New("administrator role required")
+	}
+	return nil
+}
 
 func bearerToken(r *http.Request) (*tokenPayload, error) {
 	auth := r.Header.Get("Authorization")
