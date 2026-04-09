@@ -130,6 +130,27 @@ func getProfileByAccountID(db *sql.DB, accountID int) (*Profile, error) {
 	return &p, nil
 }
 
+func getAllProfiles(db *sql.DB) ([]Profile, error) {
+	rows, err := db.Query(
+		`SELECT account_id, first_name, last_name, profile_picture, bio, motto
+		 FROM profiles ORDER BY account_id`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var profiles []Profile
+	for rows.Next() {
+		var p Profile
+		if err := rows.Scan(&p.AccountID, &p.FirstName, &p.LastName, &p.ProfilePicture, &p.Bio, &p.Motto); err != nil {
+			return nil, err
+		}
+		profiles = append(profiles, p)
+	}
+	return profiles, rows.Err()
+}
+
 func upsertProfile(db *sql.DB, p *Profile) error {
 	_, err := db.Exec(
 		`INSERT INTO profiles (account_id, first_name, last_name, profile_picture, bio, motto)

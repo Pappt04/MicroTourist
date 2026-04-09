@@ -24,6 +24,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("PUT /profile", s.handleUpdateProfile)
 	mux.HandleFunc("GET /admin/accounts", s.handleGetAllAccounts)
 	mux.HandleFunc("PUT /admin/accounts/{id}/block", s.handleBlockAccount)
+	mux.HandleFunc("GET /admin/profiles", s.handleGetAllProfiles)
 	return loggingMiddleware(mux)
 }
 
@@ -126,6 +127,10 @@ func (s *server) handleGetProfile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
+	if payload.Role != RoleGuide && payload.Role != RoleTourist {
+		writeError(w, http.StatusForbidden, "only guides and tourists have profiles")
+		return
+	}
 
 	profile, err := getProfileByAccountID(s.db, payload.UserID)
 	if err != nil {
@@ -140,6 +145,10 @@ func (s *server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 	payload, err := bearerToken(r)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+	if payload.Role != RoleGuide && payload.Role != RoleTourist {
+		writeError(w, http.StatusForbidden, "only guides and tourists have profiles")
 		return
 	}
 
@@ -207,6 +216,24 @@ func (s *server) handleBlockAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"id": accountID, "blocked": req.Blocked})
+}
+
+func (s *server) handleGetAllProfiles(w http.ResponseWriter, r *http.Request) {
+	if err := requireAdmin(r); err != nil {
+		writeError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	profiles, err := getAllProfiles(s.db)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not fetch profiles")
+		return
+	}
+
+	if profiles == nil {
+		profiles = []Profile{}
+	}
+	writeJSON(w, http.StatusOK, profiles)
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
