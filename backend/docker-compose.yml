@@ -2,6 +2,20 @@ services:
 
   # ── databases ────────────────────────────────────────────────────────────────
 
+  postgres-followers:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+    volumes:
+      - pgdata-followers:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   postgres:
     image: postgres:16-alpine
     environment:
@@ -56,6 +70,17 @@ services:
       mongo:
         condition: service_healthy
 
+  followers:
+    build: ./backend/followers
+    ports:
+      - "${FOLLOWERS_PORT:-8083}:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-followers:5432/${FOLLOWERS_DB_NAME:-microtourist-followers}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      TOKEN_SECRET: ${TOKEN_SECRET:-dev-secret-change-me}
+    depends_on:
+      postgres-followers:
   purchase:
     build: ./backend/purchase
     ports:
@@ -73,4 +98,5 @@ services:
 
 volumes:
   pgdata:
+  pgdata-followers:
   mongodata:
