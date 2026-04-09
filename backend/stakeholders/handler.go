@@ -19,6 +19,8 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /register", s.handleRegister)
 	mux.HandleFunc("POST /login", s.handleLogin)
 	mux.HandleFunc("GET /me", s.handleMe)
+	mux.HandleFunc("GET /profile", s.handleGetProfile)
+	mux.HandleFunc("PUT /profile", s.handleUpdateProfile)
 	return loggingMiddleware(mux)
 }
 
@@ -108,6 +110,44 @@ func (s *server) handleMe(w http.ResponseWriter, r *http.Request) {
 		"username": payload.Username,
 		"role":     payload.Role,
 	})
+}
+
+func (s *server) handleGetProfile(w http.ResponseWriter, r *http.Request) {
+	payload, err := bearerToken(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	profile, err := getProfileByAccountID(s.db, payload.UserID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not fetch profile")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, profile)
+}
+
+func (s *server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
+	payload, err := bearerToken(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	var profile Profile
+	if err := json.NewDecoder(r.Body).Decode(&profile); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	profile.AccountID = payload.UserID
+
+	if err := upsertProfile(s.db, &profile); err != nil {
+		writeError(w, http.StatusInternalServerError, "could not update profile")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, &profile)
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────

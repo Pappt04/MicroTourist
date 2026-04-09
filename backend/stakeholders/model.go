@@ -31,3 +31,13 @@ type LoginResponse struct {
 	Token   string  `json:"token"`
 	Account Account `json:"account"`
 }
+
+type Profile struct {
+	AccountID      int    `json:"account_id"`
+	FirstName      string `json:"first_name"`
+	LastName       string `json:"last_name"`
+	ProfilePicture string `json:"profile_picture"`
+	Bio            string `json:"bio"`
+	Motto          string `json:"motto"`
+}
+
