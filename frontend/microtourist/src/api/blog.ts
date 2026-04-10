@@ -35,8 +35,7 @@ export function deleteBlog(id: string) {
   return req(`/blogs/${id}`, { method: 'DELETE' })
 }
 
-// Likes
-export function addLike(blogId: string, userId: number) {
+export function likeBlog(blogId: string, userId: number) {
   return req(`/blogs/${blogId}/like`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -44,7 +43,7 @@ export function addLike(blogId: string, userId: number) {
   })
 }
 
-export function removeLike(blogId: string, userId: number) {
+export function unlikeBlog(blogId: string, userId: number) {
   return req(`/blogs/${blogId}/like`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
@@ -52,12 +51,11 @@ export function removeLike(blogId: string, userId: number) {
   })
 }
 
-// Comments
-export function listComments(blogId: string) {
+export function getComments(blogId: string) {
   return req(`/blogs/${blogId}/comments`)
 }
 
-export function addComment(blogId: string, authorId: number, authorUsername: string, text: string) {
+export function postComment(blogId: string, authorId: number, authorUsername: string, text: string) {
   return req(`/blogs/${blogId}/comments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -65,7 +63,7 @@ export function addComment(blogId: string, authorId: number, authorUsername: str
   })
 }
 
-export function updateComment(blogId: string, commentId: string, text: string) {
+export function editComment(blogId: string, commentId: string, text: string) {
   return req(`/blogs/${blogId}/comments/${commentId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

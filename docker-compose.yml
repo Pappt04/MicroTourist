@@ -1,0 +1,176 @@
+networks:
+  microtourist:
+    driver: bridge
+
+services:
+
+  # ── Stakeholders (Go + PostgreSQL) ────────────────────────────────────────
+  stakeholders_db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${STAKEHOLDERS_DB_USER:-admin}
+      POSTGRES_PASSWORD: ${STAKEHOLDERS_DB_PASSWORD:-secret}
+      POSTGRES_DB: ${STAKEHOLDERS_DB_NAME:-stakeholders}
+    volumes:
+      - stakeholders_pgdata:/var/lib/postgresql/data
+    networks:
+      - microtourist
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${STAKEHOLDERS_DB_USER:-admin}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  stakeholders:
+    build: ./backend/stakeholders
+    networks:
+      - microtourist
+    environment:
+      DB_HOST: stakeholders_db
+      DB_PORT: 5432
+      DB_USER: ${STAKEHOLDERS_DB_USER:-admin}
+      DB_PASSWORD: ${STAKEHOLDERS_DB_PASSWORD:-secret}
+      DB_NAME: ${STAKEHOLDERS_DB_NAME:-stakeholders}
+      TOKEN_SECRET: ${TOKEN_SECRET:-changeme}
+    depends_on:
+      stakeholders_db:
+        condition: service_healthy
+
+  # ── Blog (Python + MongoDB) ───────────────────────────────────────────────
+  mongo:
+    image: mongo:7-jammy
+    volumes:
+      - mongodata:/data/db
+    networks:
+      - microtourist
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: "none"
+
+  blog:
+    build: ./backend/blog
+    networks:
+      - microtourist
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB: ${MONGO_DB:-microtourist_blog}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  # ── Purchase (Java + PostgreSQL) ──────────────────────────────────────────
+  purchase_db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${PURCHASE_DB_USER:-admin}
+      POSTGRES_PASSWORD: ${PURCHASE_DB_PASSWORD:-secret}
+      POSTGRES_DB: ${PURCHASE_DB_NAME:-purchase}
+    volumes:
+      - purchase_pgdata:/var/lib/postgresql/data
+    networks:
+      - microtourist
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PURCHASE_DB_USER:-admin}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  purchase:
+    build: ./backend/purchase
+    networks:
+      - microtourist
+    environment:
+      DB_HOST: purchase_db
+      DB_PORT: 5432
+      DB_USER: ${PURCHASE_DB_USER:-admin}
+      DB_PASSWORD: ${PURCHASE_DB_PASSWORD:-secret}
+      DB_NAME: ${PURCHASE_DB_NAME:-purchase}
+      TOKEN_SECRET: ${TOKEN_SECRET:-changeme}
+    depends_on:
+      purchase_db:
+        condition: service_healthy
+
+  # ── Followers (Java + PostgreSQL) ─────────────────────────────────────────
+  followers_db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${FOLLOWERS_DB_USER:-admin}
+      POSTGRES_PASSWORD: ${FOLLOWERS_DB_PASSWORD:-secret}
+      POSTGRES_DB: ${FOLLOWERS_DB_NAME:-followers}
+    volumes:
+      - followers_pgdata:/var/lib/postgresql/data
+    networks:
+      - microtourist
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${FOLLOWERS_DB_USER:-admin}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  followers:
+    build: ./backend/followers
+    networks:
+      - microtourist
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://followers_db:5432/${FOLLOWERS_DB_NAME:-followers}
+      SPRING_DATASOURCE_USERNAME: ${FOLLOWERS_DB_USER:-admin}
+      SPRING_DATASOURCE_PASSWORD: ${FOLLOWERS_DB_PASSWORD:-secret}
+    depends_on:
+      followers_db:
+        condition: service_healthy
+
+  # ── Tours (Java + PostgreSQL) ─────────────────────────────────────────────
+  tours_db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${TOURS_DB_USER:-admin}
+      POSTGRES_PASSWORD: ${TOURS_DB_PASSWORD:-secret}
+      POSTGRES_DB: ${TOURS_DB_NAME:-tours}
+    volumes:
+      - tours_pgdata:/var/lib/postgresql/data
+    networks:
+      - microtourist
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TOURS_DB_USER:-admin}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  tours:
+    build: ./backend/tours
+    networks:
+      - microtourist
+    environment:
+      DB_HOST: tours_db
+      DB_PORT: 5432
+      DB_USER: ${TOURS_DB_USER:-admin}
+      DB_PASSWORD: ${TOURS_DB_PASSWORD:-secret}
+      DB_NAME: ${TOURS_DB_NAME:-tours}
+    depends_on:
+      tours_db:
+        condition: service_healthy
+
+  # ── Frontend (React + Nginx) ──────────────────────────────────────────────
+  frontend:
+    build: ./frontend/microtourist
+    ports:
+      - "80:80"
+    networks:
+      - microtourist
+    depends_on:
+      - stakeholders
+      - blog
+      - purchase
+      - followers
+      - tours
+
+volumes:
+  stakeholders_pgdata:
+  purchase_pgdata:
+  followers_pgdata:
+  tours_pgdata:
+  mongodata:
