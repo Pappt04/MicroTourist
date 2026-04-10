@@ -1,4 +1,0 @@
-include:
-  - ./backend/stakeholders/docker-compose.yml
-  - ./backend/blog/docker-compose.yml
-  - ./backend/purchase/docker-compose.yml
