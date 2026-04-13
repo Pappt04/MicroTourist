@@ -82,7 +82,7 @@ func getAccountByUsername(db *sql.DB, username string) (*Account, string, error)
 }
 
 func getAllAccounts(db *sql.DB) ([]Account, error) {
-	rows, err := db.Query(`SELECT id, username, email, role, is_blocked FROM accounts ORDER BY id`)
+	rows, err := db.Query(`SELECT id, username, email, role, is_blocked FROM accounts WHERE role != 'administrator' ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}
