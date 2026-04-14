@@ -1,5 +1,10 @@
 const BASE = '/api/blog'
 
+function authHeaders(extra?: Record<string, string>): Record<string, string> {
+  const token = localStorage.getItem('token')
+  return token ? { Authorization: `Bearer ${token}`, ...extra } : { ...extra }
+}
+
 async function req(path: string, opts?: RequestInit) {
   const res = await fetch(`${BASE}${path}`, opts)
   const data = await res.json()
@@ -18,7 +23,7 @@ export function getBlog(id: string) {
 export function createBlog(title: string, description: string, images: string[]) {
   return req('/blogs', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ title, description, images }),
   })
 }
@@ -26,17 +31,19 @@ export function createBlog(title: string, description: string, images: string[])
 export function updateBlog(id: string, data: { title?: string; description?: string; images?: string[] }) {
   return req(`/blogs/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(data),
   })
 }
 
 export function deleteBlog(id: string) {
-  return req(`/blogs/${id}`, { method: 'DELETE' })
+  return req(`/blogs/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
 }
 
-// Likes
-export function addLike(blogId: string, userId: number) {
+export function likeBlog(blogId: string, userId: number) {
   return req(`/blogs/${blogId}/like`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -44,7 +51,7 @@ export function addLike(blogId: string, userId: number) {
   })
 }
 
-export function removeLike(blogId: string, userId: number) {
+export function unlikeBlog(blogId: string, userId: number) {
   return req(`/blogs/${blogId}/like`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
@@ -52,27 +59,29 @@ export function removeLike(blogId: string, userId: number) {
   })
 }
 
-// Comments
-export function listComments(blogId: string) {
+export function getComments(blogId: string) {
   return req(`/blogs/${blogId}/comments`)
 }
 
-export function addComment(blogId: string, authorId: number, authorUsername: string, text: string) {
+export function postComment(blogId: string, text: string) {
   return req(`/blogs/${blogId}/comments`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ author_id: authorId, author_username: authorUsername, text }),
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ text }),
   })
 }
 
-export function updateComment(blogId: string, commentId: string, text: string) {
+export function editComment(blogId: string, commentId: string, text: string) {
   return req(`/blogs/${blogId}/comments/${commentId}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ text }),
   })
 }
 
 export function deleteComment(blogId: string, commentId: string) {
-  return req(`/blogs/${blogId}/comments/${commentId}`, { method: 'DELETE' })
+  return req(`/blogs/${blogId}/comments/${commentId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
 }

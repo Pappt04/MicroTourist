@@ -9,10 +9,11 @@ interface Blog {
   description: string
   images: string[]
   created_at: string
+  author_id: number
 }
 
 export default function BlogsPage() {
-  const { token } = useAuth()
+  const { token, account } = useAuth()
   const [blogs, setBlogs] = useState<Blog[]>([])
   const [error, setError] = useState('')
 
@@ -50,7 +51,7 @@ export default function BlogsPage() {
               <p className="blog-excerpt">{blog.description.slice(0, 120)}{blog.description.length > 120 ? '…' : ''}</p>
               <div style={{ display: 'flex', gap: 8 }}>
                 <Link to={`/blogs/${blog.id}`}><button className="secondary">Read</button></Link>
-                {token && (
+                {account && account.id === blog.author_id && (
                   <>
                     <Link to={`/blogs/${blog.id}/edit`}><button className="secondary">Edit</button></Link>
                     <button className="danger" onClick={() => handleDelete(blog.id)}>Delete</button>
