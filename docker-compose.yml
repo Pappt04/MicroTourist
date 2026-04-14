@@ -16,7 +16,7 @@ services:
     networks:
       - microtourist
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${STAKEHOLDERS_DB_USER:-admin}"]
+      test: ["CMD-SHELL", "pg_isready -U ${STAKEHOLDERS_DB_USER:-admin} -d ${STAKEHOLDERS_DB_NAME:-stakeholders}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -74,7 +74,7 @@ services:
     networks:
       - microtourist
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PURCHASE_DB_USER:-admin}"]
+      test: ["CMD-SHELL", "pg_isready -U ${PURCHASE_DB_USER:-admin} -d ${PURCHASE_DB_NAME:-purchase}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -106,7 +106,7 @@ services:
     networks:
       - microtourist
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${FOLLOWERS_DB_USER:-admin}"]
+      test: ["CMD-SHELL", "pg_isready -U ${FOLLOWERS_DB_USER:-admin} -d ${FOLLOWERS_DB_NAME:-followers}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -135,7 +135,7 @@ services:
     networks:
       - microtourist
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${TOURS_DB_USER:-admin}"]
+      test: ["CMD-SHELL", "pg_isready -U ${TOURS_DB_USER:-admin} -d ${TOURS_DB_NAME:-tours}"]
       interval: 5s
       timeout: 5s
       retries: 10
