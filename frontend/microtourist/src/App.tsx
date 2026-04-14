@@ -19,6 +19,7 @@ function Navbar() {
   }
 
   return (
+    <div className="navbar-wrap">
     <nav className="navbar">
       <Link to="/" className="nav-brand">MicroTourist</Link>
       <div className="nav-links">
@@ -38,6 +39,7 @@ function Navbar() {
         )}
       </div>
     </nav>
+    </div>
   )
 }
 

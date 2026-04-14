@@ -86,10 +86,12 @@ export default function Comments({ blogId }: Props) {
                 <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', marginBottom: 4 }}>
                   <strong style={{ fontSize: '0.9rem' }}>{c.author_username}</strong>
                   <span style={{ fontSize: '0.75rem', color: '#888' }}>
-                    {new Date(c.created_at).toLocaleString()}
+                    {new Date(c.created_at + 'Z').toLocaleString()}
                   </span>
                   {c.updated_at !== c.created_at && (
-                    <span style={{ fontSize: '0.75rem', color: '#aaa' }}>(edited)</span>
+                    <span style={{ fontSize: '0.75rem', color: '#aaa' }}>
+                      · edited {new Date(c.updated_at + 'Z').toLocaleString()}
+                    </span>
                   )}
                 </div>
                 <p style={{ margin: '0 0 6px' }}>{c.text}</p>

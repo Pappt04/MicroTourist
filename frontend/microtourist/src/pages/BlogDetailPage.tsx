@@ -36,7 +36,7 @@ export default function BlogDetailPage() {
       <div className="card" style={{ maxWidth: 760 }}>
         <Link to="/">← Back to blogs</Link>
         <h2 style={{ marginTop: 12 }}>{blog.title}</h2>
-        <p className="blog-meta">{new Date(blog.created_at).toLocaleString()}</p>
+        <p className="blog-meta">{new Date(blog.created_at + 'Z').toLocaleString()}</p>
 
         {blog.images?.length > 0 && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '12px 0' }}>
