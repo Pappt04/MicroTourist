@@ -29,11 +29,7 @@ export default function Comments({ blogId }: Props) {
     e.preventDefault()
     if (!account || !newText.trim()) return
     try {
-<<<<<<< HEAD
       const c = await postComment(blogId, newText.trim())
-=======
-      const c = await postComment(blogId, account.id, account.username, newText.trim())
->>>>>>> 690b09a0daf2d767eeb9a1903e39384f7a3ee81c
       setComments(prev => [...prev, c])
       setNewText('')
     } catch {
