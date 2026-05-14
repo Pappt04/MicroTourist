@@ -2,6 +2,9 @@ import { useState, useEffect, useRef, type ChangeEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { getTour, getReviews, addReview, getWaypoints, type Tour, type Review, type Waypoint } from '../api/tours'
 import { useAuth } from '../context/AuthContext'
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
+import '../leafletSetup'
 
 function Stars({ rating }: { rating: number }) {
   return (
@@ -80,19 +83,39 @@ export default function TourDetailPage() {
         </p>
         <p style={{ whiteSpace: 'pre-wrap' }}>{tour.description}</p>
 
-        {waypoints.length > 0 && (
-          <div style={{ marginTop: 12 }}>
-            <p style={{ margin: '0 0 8px', fontWeight: 600 }}>Waypoints</p>
-            <ol style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {waypoints.map(wp => (
-                <li key={wp.id}>
-                  <strong>{wp.name}</strong>
-                  {wp.description && <span style={{ color: '#666' }}> — {wp.description}</span>}
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
+        {waypoints.length > 0 && (() => {
+          const sorted = waypoints.slice().sort((a, b) => a.orderIndex - b.orderIndex)
+          const center: [number, number] = [sorted[0].latitude, sorted[0].longitude]
+          const route: [number, number][] = sorted.map(wp => [wp.latitude, wp.longitude])
+          return (
+            <div style={{ marginTop: 16 }}>
+              <p style={{ margin: '0 0 8px', fontWeight: 600 }}>Route ({waypoints.length} waypoints)</p>
+              <div style={{ height: 320, borderRadius: 8, overflow: 'hidden', border: '1px solid #e0e0e0', marginBottom: 12 }}>
+                <MapContainer center={center} zoom={8} style={{ height: '100%' }}>
+                  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
+                  {route.length >= 2 && <Polyline positions={route} color="#3b82f6" weight={3} opacity={0.8} />}
+                  {sorted.map((wp, i) => (
+                    <Marker key={wp.id} position={[wp.latitude, wp.longitude]}>
+                      <Popup>
+                        <strong>{i + 1}. {wp.name}</strong>
+                        {wp.description && <><br /><span style={{ fontSize: '0.85em' }}>{wp.description}</span></>}
+                        {wp.image && <><br /><img src={wp.image} alt={wp.name} style={{ width: 120, marginTop: 4, borderRadius: 3 }} /></>}
+                      </Popup>
+                    </Marker>
+                  ))}
+                </MapContainer>
+              </div>
+              <ol style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {sorted.map(wp => (
+                  <li key={wp.id}>
+                    <strong>{wp.name}</strong>
+                    {wp.description && <span style={{ color: '#666' }}> — {wp.description}</span>}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )
+        })()}
       </div>
 
       {/* Reviews */}

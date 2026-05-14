@@ -75,6 +75,18 @@ public class TourService {
         return waypointRepo.save(waypoint);
     }
 
+    public Waypoint updateWaypoint(String waypointId, Waypoint data) {
+        Waypoint wp = waypointRepo.findById(waypointId)
+                .orElseThrow(() -> new RuntimeException("Waypoint not found"));
+        if (data.getName() != null) wp.setName(data.getName());
+        if (data.getDescription() != null) wp.setDescription(data.getDescription());
+        if (data.getImage() != null) wp.setImage(data.getImage());
+        wp.setLatitude(data.getLatitude());
+        wp.setLongitude(data.getLongitude());
+        wp.setOrderIndex(data.getOrderIndex());
+        return waypointRepo.save(wp);
+    }
+
     public void deleteWaypoint(String waypointId) {
         waypointRepo.deleteById(waypointId);
     }

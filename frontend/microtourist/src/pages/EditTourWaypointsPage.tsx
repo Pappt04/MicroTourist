@@ -1,13 +1,10 @@
-import { useState, useCallback, useRef, type ChangeEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback, useRef, type ChangeEvent } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { createTour, addWaypoint, updateWaypoint, deleteWaypoint, type Waypoint } from '../api/tours'
+import { getTour, getWaypoints, addWaypoint, updateWaypoint, deleteWaypoint, type Waypoint } from '../api/tours'
 import { useAuth } from '../context/AuthContext'
-
 import { defaultIcon } from '../leafletSetup'
-
-const DIFFICULTIES = ['Easy', 'Medium', 'Hard']
 
 interface PendingPin { lat: number; lng: number }
 
@@ -16,25 +13,21 @@ function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number
   return null
 }
 
-export default function CreateTourPage() {
+export default function EditTourWaypointsPage() {
+  const { id: tourId } = useParams<{ id: string }>()
   const { account } = useAuth()
   const navigate = useNavigate()
 
-  const [step, setStep] = useState<1 | 2>(1)
-  const [form, setForm] = useState({ title: '', description: '', difficulty: 'Easy', tags: '' })
-  const [formError, setFormError] = useState('')
-  const [formLoading, setFormLoading] = useState(false)
-
-  const [tourId, setTourId] = useState('')
+  const [tourTitle, setTourTitle] = useState('')
   const [waypoints, setWaypoints] = useState<Waypoint[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  // add mode
   const [pending, setPending] = useState<PendingPin | null>(null)
   const [wpForm, setWpForm] = useState({ name: '', description: '', image: '' })
   const [wpError, setWpError] = useState('')
   const [wpLoading, setWpLoading] = useState(false)
 
-  // edit mode
   const [editingWp, setEditingWp] = useState<Waypoint | null>(null)
   const [editForm, setEditForm] = useState({ name: '', description: '', image: '' })
   const [editPending, setEditPending] = useState<PendingPin | null>(null)
@@ -45,18 +38,23 @@ export default function CreateTourPage() {
   const editFileRef = useRef<HTMLInputElement>(null)
 
   const handleMapClick = useCallback((lat: number, lng: number) => {
-    if (editingWp) {
-      setEditPending({ lat, lng })
-      return
-    }
+    if (editingWp) { setEditPending({ lat, lng }); return }
     setPending({ lat, lng })
     setWpForm({ name: '', description: '', image: '' })
     setWpError('')
   }, [editingWp])
 
-  if (account?.role !== 'guide') return <div className="card"><p>Only guides can create tours.</p></div>
+  useEffect(() => {
+    if (!tourId) return
+    Promise.all([getTour(tourId), getWaypoints(tourId)])
+      .then(([t, wps]) => { setTourTitle(t.title); setWaypoints(wps) })
+      .catch(() => setError('Could not load tour'))
+      .finally(() => setLoading(false))
+  }, [tourId])
 
-  function setField(field: string, value: string) { setForm(f => ({ ...f, [field]: value })) }
+  if (account?.role !== 'guide') return <div className="card"><p>Only guides can edit waypoints.</p></div>
+  if (loading) return <div className="card"><p>Loading...</p></div>
+  if (error) return <div className="card"><p className="error">{error}</p></div>
 
   function handleImageFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return
@@ -72,26 +70,12 @@ export default function CreateTourPage() {
     reader.readAsDataURL(file)
   }
 
-  async function handleCreateTour(e: React.FormEvent) {
-    e.preventDefault(); setFormError('')
-    if (!form.title.trim()) return setFormError('Title is required')
-    if (!form.description.trim()) return setFormError('Description is required')
-    const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean)
-    setFormLoading(true)
-    try {
-      const created = await createTour({ title: form.title.trim(), description: form.description.trim(), difficulty: form.difficulty, tags })
-      setTourId(created.id); setStep(2)
-    } catch (err: any) {
-      setFormError(err?.error ?? 'Could not create tour')
-    } finally { setFormLoading(false) }
-  }
-
   async function handleAddWaypoint(e: React.FormEvent) {
     e.preventDefault(); if (!pending) return
     if (!wpForm.name.trim()) return setWpError('Name is required')
     setWpLoading(true)
     try {
-      const saved = await addWaypoint(tourId, {
+      const saved = await addWaypoint(tourId!, {
         name: wpForm.name.trim(), description: wpForm.description.trim(),
         image: wpForm.image.trim(), latitude: pending.lat, longitude: pending.lng,
         orderIndex: waypoints.length,
@@ -137,45 +121,17 @@ export default function CreateTourPage() {
     } catch { alert('Could not delete waypoint') }
   }
 
-  const routePositions: [number, number][] = waypoints
-    .slice().sort((a, b) => a.orderIndex - b.orderIndex)
-    .map(wp => [wp.latitude, wp.longitude])
-
-  if (step === 1) {
-    return (
-      <div className="card" style={{ maxWidth: 560 }}>
-        <h2 style={{ marginTop: 0 }}>Create New Tour</h2>
-        {formError && <p className="error">{formError}</p>}
-        <form onSubmit={handleCreateTour}>
-          <label>Title</label>
-          <input value={form.title} onChange={e => setField('title', e.target.value)} placeholder="Tour name" required />
-          <label>Description</label>
-          <textarea value={form.description} onChange={e => setField('description', e.target.value)} rows={4} placeholder="Describe the tour..." required />
-          <label>Difficulty</label>
-          <select value={form.difficulty} onChange={e => setField('difficulty', e.target.value)}>
-            {DIFFICULTIES.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-          <label>Tags <span style={{ fontWeight: 400, color: '#888' }}>(comma-separated)</span></label>
-          <input value={form.tags} onChange={e => setField('tags', e.target.value)} placeholder="e.g. hiking, nature, city" />
-          <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
-            <button type="submit" disabled={formLoading}>{formLoading ? 'Creating...' : 'Next: Add Waypoints'}</button>
-            <button type="button" className="secondary" onClick={() => navigate('/my-tours')}>Cancel</button>
-          </div>
-        </form>
-      </div>
-    )
-  }
-
+  const sorted = waypoints.slice().sort((a, b) => a.orderIndex - b.orderIndex)
+  const routePositions: [number, number][] = sorted.map(wp => [wp.latitude, wp.longitude])
+  const mapCenter: [number, number] = sorted.length > 0 ? [sorted[0].latitude, sorted[0].longitude] : [44.0, 21.0]
   const isEditMode = !!editingWp
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Add Waypoints</h2>
+        <h2 style={{ margin: 0 }}>Edit Waypoints — {tourTitle}</h2>
         <span style={{ color: '#888', fontSize: '0.9rem' }}>
-          {isEditMode
-            ? `Editing "${editingWp!.name}" — click map to reposition`
-            : 'Click on the map to place a waypoint'}
+          {isEditMode ? `Editing "${editingWp!.name}" — click map to reposition` : 'Click on the map to add a waypoint'}
         </span>
         {isEditMode && (
           <button className="secondary" style={{ marginLeft: 'auto', fontSize: '0.85rem' }} onClick={cancelEdit}>
@@ -185,27 +141,17 @@ export default function CreateTourPage() {
       </div>
 
       <div style={{ display: 'flex', gap: 16 }}>
-        {/* Map */}
         <div style={{ flex: 1, minHeight: 480, borderRadius: 8, overflow: 'hidden', border: '1px solid #e0e0e0' }}>
-          <MapContainer center={[44.0, 21.0]} zoom={6} style={{ height: '100%', minHeight: 480 }}>
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            />
+          <MapContainer center={mapCenter} zoom={sorted.length > 0 ? 8 : 6} style={{ height: '100%', minHeight: 480 }}>
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
             <MapClickHandler onMapClick={handleMapClick} />
 
-            {/* Route polyline */}
             {routePositions.length >= 2 && (
               <Polyline positions={routePositions} color="#3b82f6" weight={3} opacity={0.8} />
             )}
 
-            {/* Saved waypoint markers */}
-            {waypoints.map((wp, i) => (
-              <Marker
-                key={wp.id}
-                position={[wp.latitude, wp.longitude]}
-                icon={editingWp?.id === wp.id ? defaultIcon : defaultIcon}
-              >
+            {sorted.map((wp, i) => (
+              <Marker key={wp.id} position={[wp.latitude, wp.longitude]} icon={editingWp?.id === wp.id ? defaultIcon : defaultIcon}>
                 <Popup>
                   <strong>{i + 1}. {wp.name}</strong>
                   {wp.description && <><br /><span style={{ fontSize: '0.85em' }}>{wp.description}</span></>}
@@ -218,14 +164,12 @@ export default function CreateTourPage() {
               </Marker>
             ))}
 
-            {/* Pending new waypoint marker */}
             {pending && !isEditMode && (
               <Marker position={[pending.lat, pending.lng]} opacity={0.6}>
                 <Popup>Fill in the form →</Popup>
               </Marker>
             )}
 
-            {/* Edit repositioning marker */}
             {isEditMode && editPending && (
               <Marker position={[editPending.lat, editPending.lng]} opacity={0.7} icon={defaultIcon}>
                 <Popup>New position for "{editingWp!.name}"</Popup>
@@ -234,17 +178,12 @@ export default function CreateTourPage() {
           </MapContainer>
         </div>
 
-        {/* Side panel */}
         <div style={{ width: 290, display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-          {/* ADD form */}
           {!isEditMode && (
             pending ? (
               <div className="card" style={{ margin: 0 }}>
                 <h4 style={{ marginTop: 0 }}>New Waypoint</h4>
-                <p style={{ fontSize: '0.8rem', color: '#666', margin: '0 0 8px' }}>
-                  {pending.lat.toFixed(5)}, {pending.lng.toFixed(5)}
-                </p>
+                <p style={{ fontSize: '0.8rem', color: '#666', margin: '0 0 8px' }}>{pending.lat.toFixed(5)}, {pending.lng.toFixed(5)}</p>
                 {wpError && <p className="error" style={{ margin: '0 0 8px' }}>{wpError}</p>}
                 <form onSubmit={handleAddWaypoint} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div>
@@ -253,7 +192,7 @@ export default function CreateTourPage() {
                   </div>
                   <div>
                     <label style={{ display: 'block', marginBottom: 2 }}>Description</label>
-                    <textarea value={wpForm.description} onChange={e => setWpForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="Short description..." style={{ width: '100%' }} />
+                    <textarea value={wpForm.description} onChange={e => setWpForm(f => ({ ...f, description: e.target.value }))} rows={2} style={{ width: '100%' }} />
                   </div>
                   <div>
                     <label style={{ display: 'block', marginBottom: 2 }}>Image</label>
@@ -275,7 +214,6 @@ export default function CreateTourPage() {
             )
           )}
 
-          {/* EDIT form */}
           {isEditMode && editPending && (
             <div className="card" style={{ margin: 0, borderLeft: '3px solid #3b82f6' }}>
               <h4 style={{ marginTop: 0, color: '#3b82f6' }}>Edit Waypoint</h4>
@@ -308,12 +246,11 @@ export default function CreateTourPage() {
             </div>
           )}
 
-          {/* Waypoints list */}
           {waypoints.length > 0 && (
             <div className="card" style={{ margin: 0 }}>
               <h4 style={{ marginTop: 0 }}>Waypoints ({waypoints.length})</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {waypoints.slice().sort((a, b) => a.orderIndex - b.orderIndex).map((wp, i) => (
+                {sorted.map((wp, i) => (
                   <div key={wp.id} style={{
                     display: 'flex', alignItems: 'flex-start', gap: 6,
                     padding: '4px 6px', borderRadius: 4,
@@ -332,7 +269,7 @@ export default function CreateTourPage() {
             </div>
           )}
 
-          <button onClick={() => navigate('/my-tours')} style={{ marginTop: 'auto' }}>Done</button>
+          <button onClick={() => navigate('/my-tours')} style={{ marginTop: 'auto' }}>← Back to My Tours</button>
         </div>
       </div>
     </div>

@@ -105,6 +105,11 @@ public class TourController {
         return tourService.addWaypoint(id, waypoint);
     }
 
+    @PutMapping("/waypoints/{waypointId}")
+    public Waypoint updateWaypoint(@PathVariable String waypointId, @RequestBody Waypoint waypoint) {
+        return tourService.updateWaypoint(waypointId, waypoint);
+    }
+
     @DeleteMapping("/waypoints/{waypointId}")
     public void deleteWaypoint(@PathVariable String waypointId) { tourService.deleteWaypoint(waypointId); }
 

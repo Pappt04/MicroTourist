@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { getMyTours, getWaypoints, deleteTour, type Tour, type Waypoint } from '../api/tours'
 import { useAuth } from '../context/AuthContext'
 
@@ -11,6 +11,7 @@ const STATUS_STYLE: Record<string, React.CSSProperties> = {
 
 export default function MyToursPage() {
   const { account } = useAuth()
+  const navigate = useNavigate()
   const [tours, setTours] = useState<Tour[]>([])
   const [waypointsMap, setWaypointsMap] = useState<Record<string, Waypoint[]>>({})
   const [error, setError] = useState('')
@@ -94,6 +95,7 @@ export default function MyToursPage() {
                 )}
 
                 <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="secondary sm" onClick={() => navigate(`/tours/${tour.id}/waypoints`)}>Edit Waypoints</button>
                   <button className="danger sm" onClick={() => handleDelete(tour.id)}>Delete</button>
                 </div>
               </div>

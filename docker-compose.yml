@@ -120,6 +120,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://followers_db:5432/${FOLLOWERS_DB_NAME:-followers}
       SPRING_DATASOURCE_USERNAME: ${FOLLOWERS_DB_USER:-admin}
       SPRING_DATASOURCE_PASSWORD: ${FOLLOWERS_DB_PASSWORD:-secret}
+      TOKEN_SECRET: ${TOKEN_SECRET:-changeme}
     depends_on:
       followers_db:
         condition: service_healthy
@@ -140,11 +141,24 @@ services:
   # ── Frontend (React + Nginx) ──────────────────────────────────────────────
   frontend:
     build: ./frontend/microtourist
+    networks:
+      - microtourist
+    depends_on:
+      - stakeholders
+      - blog
+      - purchase
+      - followers
+      - tours
+
+  # ── API Gateway (Nginx) ───────────────────────────────────────────────────
+  gateway:
+    build: ./gateway
     ports:
       - "80:80"
     networks:
       - microtourist
     depends_on:
+      - frontend
       - stakeholders
       - blog
       - purchase

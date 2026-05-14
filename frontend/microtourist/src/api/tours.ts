@@ -96,6 +96,14 @@ export function addWaypoint(tourId: string, data: Omit<Waypoint, 'id' | 'tourId'
   })
 }
 
+export function updateWaypoint(waypointId: string, data: Omit<Waypoint, 'id' | 'tourId'>): Promise<Waypoint> {
+  return req(`/waypoints/${waypointId}`, {
+    method: 'PUT',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(data),
+  })
+}
+
 export async function deleteWaypoint(waypointId: string) {
   const res = await fetch(`${BASE}/waypoints/${waypointId}`, { method: 'DELETE', headers: authHeaders() })
   if (!res.ok) throw await res.json().catch(() => ({}))

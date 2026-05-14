@@ -12,6 +12,7 @@ import MyToursPage from './pages/MyToursPage'
 import CreateTourPage from './pages/CreateTourPage'
 import PublishedToursPage from './pages/PublishedToursPage'
 import TourDetailPage from './pages/TourDetailPage'
+import EditTourWaypointsPage from './pages/EditTourWaypointsPage'
 import './App.css'
 
 function Navbar() {
@@ -70,6 +71,7 @@ function Layout() {
           <Route path="/tours/new" element={<CreateTourPage />} />
           <Route path="/tours" element={<PublishedToursPage />} />
           <Route path="/tours/:id" element={<TourDetailPage />} />
+          <Route path="/tours/:id/waypoints" element={<EditTourWaypointsPage />} />
         </Routes>
       </main>
     </>
