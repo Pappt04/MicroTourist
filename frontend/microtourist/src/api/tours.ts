@@ -41,6 +41,38 @@ export async function deleteTour(id: string) {
   if (!res.ok) throw await res.json().catch(() => ({}))
 }
 
+export function getPublishedTours(): Promise<Tour[]> {
+  return req('/published')
+}
+
+export function getTour(id: string): Promise<Tour> {
+  return req(`/${id}`)
+}
+
+export interface Review {
+  id: string
+  tourId: string
+  authorId: number
+  authorUsername: string
+  rating: number
+  comment: string
+  visitDate: string
+  createdAt: string
+  images: string[]
+}
+
+export function getReviews(tourId: string): Promise<Review[]> {
+  return req(`/${tourId}/reviews`)
+}
+
+export function addReview(tourId: string, data: { rating: number; comment: string; visitDate: string; images: string[] }): Promise<Review> {
+  return req(`/${tourId}/reviews`, {
+    method: 'POST',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(data),
+  })
+}
+
 export interface Waypoint {
   id: string
   tourId: string

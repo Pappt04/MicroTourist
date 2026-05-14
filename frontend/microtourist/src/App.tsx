@@ -10,6 +10,8 @@ import AdminPage from './pages/AdminPage'
 import RecommendationsPage from './pages/RecommendationsPage'
 import MyToursPage from './pages/MyToursPage'
 import CreateTourPage from './pages/CreateTourPage'
+import PublishedToursPage from './pages/PublishedToursPage'
+import TourDetailPage from './pages/TourDetailPage'
 import './App.css'
 
 function Navbar() {
@@ -31,6 +33,7 @@ function Navbar() {
           <>
             {account.role !== 'administrator' && <Link to="/profile">Profile</Link>}
             {account.role !== 'administrator' && <Link to="/people">People</Link>}
+            {account.role === 'tourist' && <Link to="/tours">Tours</Link>}
             {account.role === 'guide' && <Link to="/my-tours">My Tours</Link>}
             {account.role === 'administrator' && <Link to="/admin">Admin</Link>}
             <span className="nav-user">{account.username} ({account.role})</span>
@@ -65,6 +68,8 @@ function Layout() {
           <Route path="/people" element={<RecommendationsPage />} />
           <Route path="/my-tours" element={<MyToursPage />} />
           <Route path="/tours/new" element={<CreateTourPage />} />
+          <Route path="/tours" element={<PublishedToursPage />} />
+          <Route path="/tours/:id" element={<TourDetailPage />} />
         </Routes>
       </main>
     </>

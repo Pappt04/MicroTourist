@@ -14,6 +14,7 @@ public class Review {
 
     private String tourId;
     private Long authorId;
+    private String authorUsername;
     private int rating;
     private String comment;
     private LocalDate visitDate;
@@ -26,6 +27,8 @@ public class Review {
     public void setTourId(String tourId) { this.tourId = tourId; }
     public Long getAuthorId() { return authorId; }
     public void setAuthorId(Long authorId) { this.authorId = authorId; }
+    public String getAuthorUsername() { return authorUsername; }
+    public void setAuthorUsername(String authorUsername) { this.authorUsername = authorUsername; }
     public int getRating() { return rating; }
     public void setRating(int rating) { this.rating = rating; }
     public String getComment() { return comment; }

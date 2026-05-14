@@ -112,7 +112,11 @@ public class TourController {
     public List<Review> getReviews(@PathVariable String id) { return tourService.getReviews(id); }
 
     @PostMapping("/{id}/reviews")
-    public Review addReview(@PathVariable String id, @RequestBody Review review) {
-        return tourService.addReview(id, review);
+    public ResponseEntity<?> addReview(@PathVariable String id, @RequestBody Review review, HttpServletRequest req) {
+        TokenUtil.TokenPayload user = auth(req);
+        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "authentication required"));
+        review.setAuthorId(user.userId());
+        review.setAuthorUsername(user.username());
+        return ResponseEntity.status(201).body(tourService.addReview(id, review));
     }
 }
