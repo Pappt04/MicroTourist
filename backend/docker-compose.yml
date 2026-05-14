@@ -2,19 +2,17 @@ services:
 
   # ── databases ────────────────────────────────────────────────────────────────
 
-  postgres-followers:
-    image: postgres:16-alpine
+  neo4j:
+    image: neo4j:5-community
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${FOLLOWERS_DB_NAME:-microtourist-followers}
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-neo4j123}
     volumes:
-      - pgdata-followers:/var/lib/postgresql/data
+      - neo4jdata:/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-      interval: 5s
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:7474"]
+      interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 15
 
   postgres:
     image: postgres:16-alpine
@@ -66,21 +64,25 @@ services:
     environment:
       MONGO_URI: mongodb://mongo:27017
       MONGO_DB: ${MONGO_DB:-microtourist_blog}
+      TOKEN_SECRET: ${TOKEN_SECRET:-dev-secret-change-me}
+      FOLLOWERS_URL: http://followers:8083
     depends_on:
       mongo:
         condition: service_healthy
+      followers:
+        condition: service_started
 
   followers:
     build: ./followers
     ports:
       - "${FOLLOWERS_PORT:-8083}:8083"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-followers:5432/${FOLLOWERS_DB_NAME:-microtourist-followers}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USERNAME: neo4j
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-neo4j123}
       TOKEN_SECRET: ${TOKEN_SECRET:-dev-secret-change-me}
     depends_on:
-      postgres-followers:
+      neo4j:
         condition: service_healthy
 
   purchase:
@@ -111,5 +113,5 @@ services:
 
 volumes:
   pgdata:
-  pgdata-followers:
+  neo4jdata:
   mongodata:

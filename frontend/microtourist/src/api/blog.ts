@@ -12,8 +12,10 @@ async function req(path: string, opts?: RequestInit) {
   return data
 }
 
-export function listBlogs() {
-  return req('/blogs?render=true')
+export function listBlogs(authorIds?: number[]) {
+  const params = new URLSearchParams({ render: 'true' })
+  if (authorIds && authorIds.length > 0) params.set('author_ids', authorIds.join(','))
+  return req(`/blogs?${params}`)
 }
 
 export function getBlog(id: string) {

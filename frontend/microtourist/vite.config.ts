@@ -13,6 +13,10 @@ export default defineConfig({
         target: 'http://localhost:8081',
         rewrite: path => path.replace(/^\/api\/blog/, ''),
       },
+      '/api/followers': {
+        target: 'http://localhost:8083',
+        rewrite: path => path.replace(/^\/api\/followers/, ''),
+      },
     },
   },
 })

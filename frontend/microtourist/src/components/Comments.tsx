@@ -13,13 +13,18 @@ interface Comment {
 
 interface Props {
   blogId: string
+  authorId: number
+  isFollowing: boolean
+  isOwn: boolean
 }
 
-export default function Comments({ blogId }: Props) {
+export default function Comments({ blogId, isFollowing, isOwn }: Props) {
   const { account } = useAuth()
   const [comments, setComments] = useState<Comment[]>([])
   const [newText, setNewText] = useState('')
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null)
+
+  const canComment = isOwn || isFollowing
 
   useEffect(() => {
     getComments(blogId).then(setComments).catch(() => {})
@@ -32,8 +37,8 @@ export default function Comments({ blogId }: Props) {
       const c = await postComment(blogId, newText.trim())
       setComments(prev => [...prev, c])
       setNewText('')
-    } catch {
-      alert('Could not post comment')
+    } catch (err: any) {
+      alert(err?.error ?? 'Could not post comment')
     }
   }
 
@@ -101,16 +106,12 @@ export default function Comments({ blogId }: Props) {
                       className="secondary"
                       style={{ padding: '2px 8px', fontSize: '0.8rem' }}
                       onClick={() => setEditing({ id: c.id, text: c.text })}
-                    >
-                      Edit
-                    </button>
+                    >Edit</button>
                     <button
                       className="danger"
                       style={{ padding: '2px 8px', fontSize: '0.8rem' }}
                       onClick={() => handleDelete(c.id)}
-                    >
-                      Delete
-                    </button>
+                    >Delete</button>
                   </div>
                 )}
               </>
@@ -119,7 +120,9 @@ export default function Comments({ blogId }: Props) {
         ))}
       </div>
 
-      {account ? (
+      {!account ? (
+        <p style={{ color: '#888' }}>Login to leave a comment.</p>
+      ) : canComment ? (
         <form onSubmit={handlePost} style={{ gap: 8 }}>
           <label>Add a comment</label>
           <textarea
@@ -132,7 +135,7 @@ export default function Comments({ blogId }: Props) {
           <button type="submit">Post Comment</button>
         </form>
       ) : (
-        <p style={{ color: '#888' }}>Login to leave a comment.</p>
+        <p style={{ color: '#888' }}>You must follow this author to leave a comment.</p>
       )}
     </div>
   )

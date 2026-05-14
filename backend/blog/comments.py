@@ -1,3 +1,6 @@
+import os
+import requests as http_requests
+
 from flask import Blueprint, request, jsonify
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -5,6 +8,25 @@ from datetime import datetime, timezone
 
 from db import get_db
 from middleware import require_auth
+
+FOLLOWERS_URL = os.getenv("FOLLOWERS_URL", "http://localhost:8083")
+
+
+def _can_comment(token: str, commenter_id: int, author_id: int) -> bool:
+    """Returns True if commenter follows author (or is the author)."""
+    if commenter_id == author_id:
+        return True
+    try:
+        resp = http_requests.get(
+            f"{FOLLOWERS_URL}/is-following/{author_id}",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=3,
+        )
+        if resp.status_code == 200:
+            return resp.json().get("isFollowing", False)
+    except Exception:
+        pass
+    return False
 
 comments_bp = Blueprint("comments", __name__)
 
@@ -39,8 +61,13 @@ def post_comment(blog_id):
     except InvalidId:
         return jsonify({"error": "invalid blog id"}), 400
 
-    if not get_db().blogs.find_one({"_id": oid}):
+    blog = get_db().blogs.find_one({"_id": oid})
+    if not blog:
         return jsonify({"error": "blog not found"}), 404
+
+    token = request.headers.get("Authorization", "")[7:]
+    if not _can_comment(token, user["uid"], blog["author_id"]):
+        return jsonify({"error": "you must follow this author to comment"}), 403
 
     data = request.get_json(silent=True)
     if not data:

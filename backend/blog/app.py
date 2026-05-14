@@ -74,7 +74,16 @@ def create_blog():
 @app.route("/blogs", methods=["GET"])
 def list_blogs():
     render = request.args.get("render", "false").lower() == "true"
-    cursor = get_db().blogs.find().sort("created_at", -1)
+    query = {}
+    author_ids_str = request.args.get("author_ids", "")
+    if author_ids_str:
+        try:
+            ids = [int(x) for x in author_ids_str.split(",") if x.strip()]
+            if ids:
+                query["author_id"] = {"$in": ids}
+        except ValueError:
+            pass
+    cursor = get_db().blogs.find(query).sort("created_at", -1)
     blogs = []
     for doc in cursor:
         if "likes" not in doc:
