@@ -7,7 +7,6 @@ import com.microtourist.tours.repository.ReviewRepository;
 import com.microtourist.tours.repository.TourRepository;
 import com.microtourist.tours.repository.WaypointRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -28,13 +27,13 @@ public class TourService {
 
     public List<Tour> getPublished() { return tourRepo.findByStatus("PUBLISHED"); }
 
-    public Tour getById(Long id) {
+    public Tour getById(String id) {
         return tourRepo.findById(id).orElseThrow(() -> new RuntimeException("Tour not found"));
     }
 
     public Tour save(Tour tour) { return tourRepo.save(tour); }
 
-    public Tour update(Long id, Tour data) {
+    public Tour update(String id, Tour data) {
         Tour tour = getById(id);
         if (data.getTitle() != null) tour.setTitle(data.getTitle());
         if (data.getDescription() != null) tour.setDescription(data.getDescription());
@@ -44,7 +43,7 @@ public class TourService {
         return tourRepo.save(tour);
     }
 
-    public Tour publish(Long id) {
+    public Tour publish(String id) {
         Tour tour = getById(id);
         List<Waypoint> waypoints = waypointRepo.findByTourIdOrderByOrderIndex(id);
         if (waypoints.size() < 2) throw new RuntimeException("At least 2 waypoints required to publish");
@@ -52,38 +51,37 @@ public class TourService {
         return tourRepo.save(tour);
     }
 
-    public Tour archive(Long id) {
+    public Tour archive(String id) {
         Tour tour = getById(id);
         tour.setStatus("ARCHIVED");
         return tourRepo.save(tour);
     }
 
-    @Transactional
-    public void delete(Long id) {
+    public void delete(String id) {
         waypointRepo.deleteByTourId(id);
         reviewRepo.deleteAll(reviewRepo.findByTourId(id));
         tourRepo.deleteById(id);
     }
 
-    public List<Waypoint> getWaypoints(Long tourId) {
+    public List<Waypoint> getWaypoints(String tourId) {
         return waypointRepo.findByTourIdOrderByOrderIndex(tourId);
     }
 
-    public Waypoint addWaypoint(Long tourId, Waypoint waypoint) {
+    public Waypoint addWaypoint(String tourId, Waypoint waypoint) {
         getById(tourId);
         waypoint.setTourId(tourId);
         return waypointRepo.save(waypoint);
     }
 
-    public void deleteWaypoint(Long waypointId) {
+    public void deleteWaypoint(String waypointId) {
         waypointRepo.deleteById(waypointId);
     }
 
-    public List<Review> getReviews(Long tourId) {
+    public List<Review> getReviews(String tourId) {
         return reviewRepo.findByTourId(tourId);
     }
 
-    public Review addReview(Long tourId, Review review) {
+    public Review addReview(String tourId, Review review) {
         getById(tourId);
         review.setTourId(tourId);
         return reviewRepo.save(review);

@@ -1,16 +1,15 @@
 package com.microtourist.tours.model;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-@Entity
-@Table(name = "waypoints")
+@Document(collection = "waypoints")
 public class Waypoint {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    private Long tourId;
+    private String tourId;
     private String name;
     private String description;
     private double latitude;
@@ -18,10 +17,10 @@ public class Waypoint {
     private String image;
     private int orderIndex;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public Long getTourId() { return tourId; }
-    public void setTourId(Long tourId) { this.tourId = tourId; }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+    public String getTourId() { return tourId; }
+    public void setTourId(String tourId) { this.tourId = tourId; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getDescription() { return description; }

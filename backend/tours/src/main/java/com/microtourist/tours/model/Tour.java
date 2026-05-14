@@ -1,16 +1,15 @@
 package com.microtourist.tours.model;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Entity
-@Table(name = "tours")
+@Document(collection = "tours")
 public class Tour {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
     private String title;
     private String description;
@@ -19,14 +18,10 @@ public class Tour {
     private double price = 0;
     private Long authorId;
     private LocalDateTime createdAt = LocalDateTime.now();
-
-    @ElementCollection
-    @CollectionTable(name = "tour_tags", joinColumns = @JoinColumn(name = "tour_id"))
-    @Column(name = "tag")
     private List<String> tags;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getDescription() { return description; }

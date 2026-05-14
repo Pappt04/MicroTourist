@@ -98,6 +98,17 @@ services:
       postgres:
         condition: service_healthy
 
+  tours:
+    build: ./tours
+    ports:
+      - "${TOURS_PORT:-8084}:8084"
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB: ${TOURS_MONGO_DB:-microtourist-tours}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
 volumes:
   pgdata:
   pgdata-followers:

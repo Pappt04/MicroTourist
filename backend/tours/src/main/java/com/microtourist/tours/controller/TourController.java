@@ -26,39 +26,39 @@ public class TourController {
     public List<Tour> getPublished() { return tourService.getPublished(); }
 
     @GetMapping("/{id}")
-    public Tour getById(@PathVariable Long id) { return tourService.getById(id); }
+    public Tour getById(@PathVariable String id) { return tourService.getById(id); }
 
     @PostMapping
     public Tour create(@RequestBody Tour tour) { return tourService.save(tour); }
 
     @PutMapping("/{id}")
-    public Tour update(@PathVariable Long id, @RequestBody Tour tour) { return tourService.update(id, tour); }
+    public Tour update(@PathVariable String id, @RequestBody Tour tour) { return tourService.update(id, tour); }
 
     @PutMapping("/{id}/publish")
-    public Tour publish(@PathVariable Long id) { return tourService.publish(id); }
+    public Tour publish(@PathVariable String id) { return tourService.publish(id); }
 
     @PutMapping("/{id}/archive")
-    public Tour archive(@PathVariable Long id) { return tourService.archive(id); }
+    public Tour archive(@PathVariable String id) { return tourService.archive(id); }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) { tourService.delete(id); }
+    public void delete(@PathVariable String id) { tourService.delete(id); }
 
     @GetMapping("/{id}/waypoints")
-    public List<Waypoint> getWaypoints(@PathVariable Long id) { return tourService.getWaypoints(id); }
+    public List<Waypoint> getWaypoints(@PathVariable String id) { return tourService.getWaypoints(id); }
 
     @PostMapping("/{id}/waypoints")
-    public Waypoint addWaypoint(@PathVariable Long id, @RequestBody Waypoint waypoint) {
+    public Waypoint addWaypoint(@PathVariable String id, @RequestBody Waypoint waypoint) {
         return tourService.addWaypoint(id, waypoint);
     }
 
     @DeleteMapping("/waypoints/{waypointId}")
-    public void deleteWaypoint(@PathVariable Long waypointId) { tourService.deleteWaypoint(waypointId); }
+    public void deleteWaypoint(@PathVariable String waypointId) { tourService.deleteWaypoint(waypointId); }
 
     @GetMapping("/{id}/reviews")
-    public List<Review> getReviews(@PathVariable Long id) { return tourService.getReviews(id); }
+    public List<Review> getReviews(@PathVariable String id) { return tourService.getReviews(id); }
 
     @PostMapping("/{id}/reviews")
-    public Review addReview(@PathVariable Long id, @RequestBody Review review) {
+    public Review addReview(@PathVariable String id, @RequestBody Review review) {
         return tourService.addReview(id, review);
     }
 }

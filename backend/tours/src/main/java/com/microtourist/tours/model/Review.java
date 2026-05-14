@@ -1,34 +1,29 @@
 package com.microtourist.tours.model;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Entity
-@Table(name = "reviews")
+@Document(collection = "reviews")
 public class Review {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    private Long tourId;
+    private String tourId;
     private Long authorId;
     private int rating;
     private String comment;
     private LocalDate visitDate;
     private LocalDateTime createdAt = LocalDateTime.now();
-
-    @ElementCollection
-    @CollectionTable(name = "review_images", joinColumns = @JoinColumn(name = "review_id"))
-    @Column(name = "image_url")
     private List<String> images;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public Long getTourId() { return tourId; }
-    public void setTourId(Long tourId) { this.tourId = tourId; }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+    public String getTourId() { return tourId; }
+    public void setTourId(String tourId) { this.tourId = tourId; }
     public Long getAuthorId() { return authorId; }
     public void setAuthorId(Long authorId) { this.authorId = authorId; }
     public int getRating() { return rating; }
