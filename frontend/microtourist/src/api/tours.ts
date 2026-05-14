@@ -36,6 +36,35 @@ export function getMyTours(): Promise<Tour[]> {
   return req('/my', { headers: authHeaders() })
 }
 
-export function deleteTour(id: string) {
-  return req(`/${id}`, { method: 'DELETE', headers: authHeaders() })
+export async function deleteTour(id: string) {
+  const res = await fetch(`${BASE}/${id}`, { method: 'DELETE', headers: authHeaders() })
+  if (!res.ok) throw await res.json().catch(() => ({}))
+}
+
+export interface Waypoint {
+  id: string
+  tourId: string
+  name: string
+  description: string
+  latitude: number
+  longitude: number
+  image: string
+  orderIndex: number
+}
+
+export function getWaypoints(tourId: string): Promise<Waypoint[]> {
+  return req(`/${tourId}/waypoints`, { headers: authHeaders() })
+}
+
+export function addWaypoint(tourId: string, data: Omit<Waypoint, 'id' | 'tourId'>): Promise<Waypoint> {
+  return req(`/${tourId}/waypoints`, {
+    method: 'POST',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteWaypoint(waypointId: string) {
+  const res = await fetch(`${BASE}/waypoints/${waypointId}`, { method: 'DELETE', headers: authHeaders() })
+  if (!res.ok) throw await res.json().catch(() => ({}))
 }

@@ -124,35 +124,17 @@ services:
       followers_db:
         condition: service_healthy
 
-  # ── Tours (Java + PostgreSQL) ─────────────────────────────────────────────
-  tours_db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: ${TOURS_DB_USER:-admin}
-      POSTGRES_PASSWORD: ${TOURS_DB_PASSWORD:-secret}
-      POSTGRES_DB: ${TOURS_DB_NAME:-tours}
-    volumes:
-      - tours_pgdata:/var/lib/postgresql/data
-    networks:
-      - microtourist
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${TOURS_DB_USER:-admin} -d ${TOURS_DB_NAME:-tours}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
+  # ── Tours (Java + MongoDB) ────────────────────────────────────────────────
   tours:
     build: ./backend/tours
     networks:
       - microtourist
     environment:
-      DB_HOST: tours_db
-      DB_PORT: 5432
-      DB_USER: ${TOURS_DB_USER:-admin}
-      DB_PASSWORD: ${TOURS_DB_PASSWORD:-secret}
-      DB_NAME: ${TOURS_DB_NAME:-tours}
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB: ${TOURS_MONGO_DB:-microtourist_tours}
+      TOKEN_SECRET: ${TOKEN_SECRET:-changeme}
     depends_on:
-      tours_db:
+      mongo:
         condition: service_healthy
 
   # ── Frontend (React + Nginx) ──────────────────────────────────────────────
@@ -173,5 +155,4 @@ volumes:
   stakeholders_pgdata:
   purchase_pgdata:
   followers_pgdata:
-  tours_pgdata:
   mongodata:
