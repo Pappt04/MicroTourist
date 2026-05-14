@@ -122,7 +122,6 @@ export default function BlogsPage() {
       {error && <p className="error">{error}</p>}
       {blogs.length === 0 && !error && (
         <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--muted)' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>✈️</div>
           <p style={{ margin: 0, fontSize: '1rem' }}>
             {feedMode ? 'No posts from people you follow. Try following someone!' : 'No posts yet. Be the first to share a travel story!'}
           </p>

@@ -27,6 +27,8 @@ public class TourService {
 
     public List<Tour> getPublished() { return tourRepo.findByStatus("PUBLISHED"); }
 
+    public List<Tour> getByAuthorId(Long authorId) { return tourRepo.findByAuthorId(authorId); }
+
     public Tour getById(String id) {
         return tourRepo.findById(id).orElseThrow(() -> new RuntimeException("Tour not found"));
     }

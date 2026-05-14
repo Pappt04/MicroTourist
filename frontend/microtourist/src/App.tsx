@@ -8,6 +8,8 @@ import BlogDetailPage from './pages/BlogDetailPage'
 import CreateBlogPage from './pages/CreateBlogPage'
 import AdminPage from './pages/AdminPage'
 import RecommendationsPage from './pages/RecommendationsPage'
+import MyToursPage from './pages/MyToursPage'
+import CreateTourPage from './pages/CreateTourPage'
 import './App.css'
 
 function Navbar() {
@@ -29,6 +31,7 @@ function Navbar() {
           <>
             {account.role !== 'administrator' && <Link to="/profile">Profile</Link>}
             {account.role !== 'administrator' && <Link to="/people">People</Link>}
+            {account.role === 'guide' && <Link to="/my-tours">My Tours</Link>}
             {account.role === 'administrator' && <Link to="/admin">Admin</Link>}
             <span className="nav-user">{account.username} ({account.role})</span>
             <button className="nav-btn" onClick={handleLogout}>Logout</button>
@@ -60,6 +63,8 @@ function Layout() {
           <Route path="/blogs/:id/edit" element={<CreateBlogPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/people" element={<RecommendationsPage />} />
+          <Route path="/my-tours" element={<MyToursPage />} />
+          <Route path="/tours/new" element={<CreateTourPage />} />
         </Routes>
       </main>
     </>
