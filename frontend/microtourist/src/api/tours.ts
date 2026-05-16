@@ -108,3 +108,25 @@ export async function deleteWaypoint(waypointId: string) {
   const res = await fetch(`${BASE}/waypoints/${waypointId}`, { method: 'DELETE', headers: authHeaders() })
   if (!res.ok) throw await res.json().catch(() => ({}))
 }
+
+export interface TouristPosition {
+  id: string
+  userId: number
+  latitude: number
+  longitude: number
+  updatedAt: string
+}
+
+export function savePosition(latitude: number, longitude: number): Promise<TouristPosition> {
+  return req('/position', {
+    method: 'PUT',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ latitude, longitude }),
+  })
+}
+
+export function getMyPosition(): Promise<TouristPosition | null> {
+  return req('/position', { headers: authHeaders() })
+    .then(d => (d?.latitude != null ? d : null))
+    .catch(() => null)
+}

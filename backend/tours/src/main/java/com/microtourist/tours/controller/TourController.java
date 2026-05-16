@@ -124,4 +124,23 @@ public class TourController {
         review.setAuthorUsername(user.username());
         return ResponseEntity.status(201).body(tourService.addReview(id, review));
     }
+
+    @PutMapping("/position")
+    public ResponseEntity<?> savePosition(@RequestBody Map<String, Double> body, HttpServletRequest req) {
+        TokenUtil.TokenPayload user = auth(req);
+        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "authentication required"));
+        Double lat = body.get("latitude");
+        Double lng = body.get("longitude");
+        if (lat == null || lng == null) return ResponseEntity.badRequest().body(Map.of("error", "latitude and longitude required"));
+        return ResponseEntity.ok(tourService.savePosition(user.userId(), lat, lng));
+    }
+
+    @GetMapping("/position")
+    public ResponseEntity<?> getPosition(HttpServletRequest req) {
+        TokenUtil.TokenPayload user = auth(req);
+        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "authentication required"));
+        return tourService.getPosition(user.userId())
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElse(ResponseEntity.ok(Map.of()));
+    }
 }

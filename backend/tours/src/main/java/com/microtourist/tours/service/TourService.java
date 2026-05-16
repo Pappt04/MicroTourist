@@ -2,13 +2,17 @@ package com.microtourist.tours.service;
 
 import com.microtourist.tours.model.Review;
 import com.microtourist.tours.model.Tour;
+import com.microtourist.tours.model.TouristPosition;
 import com.microtourist.tours.model.Waypoint;
 import com.microtourist.tours.repository.ReviewRepository;
+import com.microtourist.tours.repository.TouristPositionRepository;
 import com.microtourist.tours.repository.TourRepository;
 import com.microtourist.tours.repository.WaypointRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class TourService {
@@ -16,11 +20,13 @@ public class TourService {
     private final TourRepository tourRepo;
     private final WaypointRepository waypointRepo;
     private final ReviewRepository reviewRepo;
+    private final TouristPositionRepository positionRepo;
 
-    public TourService(TourRepository tourRepo, WaypointRepository waypointRepo, ReviewRepository reviewRepo) {
+    public TourService(TourRepository tourRepo, WaypointRepository waypointRepo, ReviewRepository reviewRepo, TouristPositionRepository positionRepo) {
         this.tourRepo = tourRepo;
         this.waypointRepo = waypointRepo;
         this.reviewRepo = reviewRepo;
+        this.positionRepo = positionRepo;
     }
 
     public List<Tour> getAll() { return tourRepo.findAll(); }
@@ -99,5 +105,18 @@ public class TourService {
         getById(tourId);
         review.setTourId(tourId);
         return reviewRepo.save(review);
+    }
+
+    public TouristPosition savePosition(Long userId, double lat, double lng) {
+        TouristPosition pos = positionRepo.findByUserId(userId).orElse(new TouristPosition());
+        pos.setUserId(userId);
+        pos.setLatitude(lat);
+        pos.setLongitude(lng);
+        pos.setUpdatedAt(LocalDateTime.now());
+        return positionRepo.save(pos);
+    }
+
+    public Optional<TouristPosition> getPosition(Long userId) {
+        return positionRepo.findByUserId(userId);
     }
 }
