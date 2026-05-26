@@ -47,21 +47,45 @@ public class TourService {
         if (data.getDescription() != null) tour.setDescription(data.getDescription());
         if (data.getDifficulty() != null) tour.setDifficulty(data.getDifficulty());
         if (data.getTags() != null) tour.setTags(data.getTags());
+        if (data.getTransportTimes() != null) tour.setTransportTimes(data.getTransportTimes());
         tour.setPrice(data.getPrice());
         return tourRepo.save(tour);
     }
 
     public Tour publish(String id) {
         Tour tour = getById(id);
+        if (tour.getTitle() == null || tour.getTitle().isBlank())
+            throw new RuntimeException("Tour must have a title");
+        if (tour.getDescription() == null || tour.getDescription().isBlank())
+            throw new RuntimeException("Tour must have a description");
+        if (tour.getDifficulty() == null || tour.getDifficulty().isBlank())
+            throw new RuntimeException("Tour must have a difficulty level");
+        if (tour.getTags() == null || tour.getTags().isEmpty())
+            throw new RuntimeException("Tour must have at least one tag");
         List<Waypoint> waypoints = waypointRepo.findByTourIdOrderByOrderIndex(id);
-        if (waypoints.size() < 2) throw new RuntimeException("At least 2 waypoints required to publish");
+        if (waypoints.size() < 2)
+            throw new RuntimeException("Tour must have at least 2 waypoints");
+        if (tour.getTransportTimes() == null || tour.getTransportTimes().isEmpty())
+            throw new RuntimeException("Tour must have at least one transport time defined");
         tour.setStatus("PUBLISHED");
+        tour.setPublishedAt(LocalDateTime.now());
         return tourRepo.save(tour);
     }
 
     public Tour archive(String id) {
         Tour tour = getById(id);
         tour.setStatus("ARCHIVED");
+        tour.setArchivedAt(LocalDateTime.now());
+        return tourRepo.save(tour);
+    }
+
+    public Tour reactivate(String id) {
+        Tour tour = getById(id);
+        if (!"ARCHIVED".equals(tour.getStatus()))
+            throw new RuntimeException("Only archived tours can be reactivated");
+        tour.setStatus("PUBLISHED");
+        tour.setPublishedAt(LocalDateTime.now());
+        tour.setArchivedAt(null);
         return tourRepo.save(tour);
     }
 
@@ -71,6 +95,28 @@ public class TourService {
         tourRepo.deleteById(id);
     }
 
+    private double haversineKm(double lat1, double lon1, double lat2, double lon2) {
+        final double R = 6371.0;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    private void recalculateLength(String tourId) {
+        List<Waypoint> wps = waypointRepo.findByTourIdOrderByOrderIndex(tourId);
+        double total = 0;
+        for (int i = 1; i < wps.size(); i++) {
+            total += haversineKm(wps.get(i - 1).getLatitude(), wps.get(i - 1).getLongitude(),
+                    wps.get(i).getLatitude(), wps.get(i).getLongitude());
+        }
+        Tour tour = getById(tourId);
+        tour.setLengthKm(Math.round(total * 100.0) / 100.0);
+        tourRepo.save(tour);
+    }
+
     public List<Waypoint> getWaypoints(String tourId) {
         return waypointRepo.findByTourIdOrderByOrderIndex(tourId);
     }
@@ -78,7 +124,9 @@ public class TourService {
     public Waypoint addWaypoint(String tourId, Waypoint waypoint) {
         getById(tourId);
         waypoint.setTourId(tourId);
-        return waypointRepo.save(waypoint);
+        Waypoint saved = waypointRepo.save(waypoint);
+        recalculateLength(tourId);
+        return saved;
     }
 
     public Waypoint updateWaypoint(String waypointId, Waypoint data) {
@@ -90,11 +138,17 @@ public class TourService {
         wp.setLatitude(data.getLatitude());
         wp.setLongitude(data.getLongitude());
         wp.setOrderIndex(data.getOrderIndex());
-        return waypointRepo.save(wp);
+        Waypoint saved = waypointRepo.save(wp);
+        recalculateLength(wp.getTourId());
+        return saved;
     }
 
     public void deleteWaypoint(String waypointId) {
+        Waypoint wp = waypointRepo.findById(waypointId)
+                .orElseThrow(() -> new RuntimeException("Waypoint not found"));
+        String tourId = wp.getTourId();
         waypointRepo.deleteById(waypointId);
+        recalculateLength(tourId);
     }
 
     public List<Review> getReviews(String tourId) {

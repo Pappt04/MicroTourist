@@ -1,10 +1,16 @@
 import { useState, useEffect, useRef, type ChangeEvent } from 'react'
 import { useParams } from 'react-router-dom'
-import { getTour, getReviews, addReview, getWaypoints, type Tour, type Review, type Waypoint } from '../api/tours'
+import { getTour, getReviews, addReview, getWaypoints, type Tour, type Review, type Waypoint, type TransportType } from '../api/tours'
 import { useAuth } from '../context/AuthContext'
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import '../leafletSetup'
+
+const TRANSPORT_LABELS: Record<TransportType, string> = {
+  WALKING: 'Walking',
+  BIKE: 'Bike',
+  CAR: 'Car',
+}
 
 function Stars({ rating }: { rating: number }) {
   return (
@@ -80,21 +86,39 @@ export default function TourDetailPage() {
         <p className="blog-meta">
           {tour.difficulty}
           {tour.tags?.length > 0 && <> · {tour.tags.join(', ')}</>}
+          {(tour.lengthKm ?? 0) > 0 && <> · <strong>{tour.lengthKm?.toFixed(1)} km</strong></>}
+          {tour.publishedAt && <> · Published: {new Date(tour.publishedAt).toLocaleString()}</>}
         </p>
+        {tour.transportTimes && tour.transportTimes.length > 0 && (
+          <p className="blog-meta">
+            {tour.transportTimes.map((tt, i) => (
+              <span key={i}>{i > 0 ? ' · ' : ''}{TRANSPORT_LABELS[tt.transport as TransportType]}: {tt.minutes} min</span>
+            ))}
+          </p>
+        )}
         <p style={{ whiteSpace: 'pre-wrap' }}>{tour.description}</p>
 
         {waypoints.length > 0 && (() => {
           const sorted = waypoints.slice().sort((a, b) => a.orderIndex - b.orderIndex)
+          const isTourist = account?.role === 'tourist'
+          const visible = isTourist ? sorted.slice(0, 1) : sorted
           const center: [number, number] = [sorted[0].latitude, sorted[0].longitude]
-          const route: [number, number][] = sorted.map(wp => [wp.latitude, wp.longitude])
+          const route: [number, number][] = visible.map(wp => [wp.latitude, wp.longitude])
           return (
             <div style={{ marginTop: 16 }}>
-              <p style={{ margin: '0 0 8px', fontWeight: 600 }}>Route ({waypoints.length} waypoints)</p>
+              <p style={{ margin: '0 0 8px', fontWeight: 600 }}>
+                {isTourist ? 'Starting Point' : `Route (${waypoints.length} waypoints)`}
+              </p>
+              {isTourist && (
+                <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#888' }}>
+                  Purchase this tour to unlock all waypoints.
+                </p>
+              )}
               <div style={{ height: 320, borderRadius: 8, overflow: 'hidden', border: '1px solid #e0e0e0', marginBottom: 12 }}>
                 <MapContainer center={center} zoom={8} style={{ height: '100%' }}>
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
                   {route.length >= 2 && <Polyline positions={route} color="#3b82f6" weight={3} opacity={0.8} />}
-                  {sorted.map((wp, i) => (
+                  {visible.map((wp, i) => (
                     <Marker key={wp.id} position={[wp.latitude, wp.longitude]}>
                       <Popup>
                         <strong>{i + 1}. {wp.name}</strong>
@@ -106,7 +130,7 @@ export default function TourDetailPage() {
                 </MapContainer>
               </div>
               <ol style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {sorted.map(wp => (
+                {visible.map(wp => (
                   <li key={wp.id}>
                     <strong>{wp.name}</strong>
                     {wp.description && <span style={{ color: '#666' }}> — {wp.description}</span>}

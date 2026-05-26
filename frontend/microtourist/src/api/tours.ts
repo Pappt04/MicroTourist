@@ -12,6 +12,13 @@ async function req(path: string, opts?: RequestInit) {
   return data
 }
 
+export type TransportType = 'WALKING' | 'BIKE' | 'CAR'
+
+export interface TransportTime {
+  transport: TransportType
+  minutes: number
+}
+
 export interface Tour {
   id: string
   title: string
@@ -22,14 +29,38 @@ export interface Tour {
   price: number
   authorId: number
   createdAt: string
+  publishedAt?: string
+  archivedAt?: string
+  lengthKm?: number
+  transportTimes?: TransportTime[]
 }
 
-export function createTour(data: { title: string; description: string; difficulty: string; tags: string[] }) {
+export function createTour(data: { title: string; description: string; difficulty: string; tags: string[]; transportTimes: TransportTime[] }): Promise<Tour> {
   return req('', {
     method: 'POST',
     headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(data),
   })
+}
+
+export function updateTour(id: string, data: Partial<Tour>): Promise<Tour> {
+  return req(`/${id}`, {
+    method: 'PUT',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(data),
+  })
+}
+
+export function publishTour(id: string): Promise<Tour> {
+  return req(`/${id}/publish`, { method: 'PUT', headers: authHeaders() })
+}
+
+export function archiveTour(id: string): Promise<Tour> {
+  return req(`/${id}/archive`, { method: 'PUT', headers: authHeaders() })
+}
+
+export function reactivateTour(id: string): Promise<Tour> {
+  return req(`/${id}/reactivate`, { method: 'PUT', headers: authHeaders() })
 }
 
 export function getMyTours(): Promise<Tour[]> {

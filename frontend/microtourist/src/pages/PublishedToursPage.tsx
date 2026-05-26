@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getPublishedTours, type Tour } from '../api/tours'
+import { getPublishedTours, type Tour, type TransportType } from '../api/tours'
+
+const TRANSPORT_LABELS: Record<TransportType, string> = {
+  WALKING: 'Walking',
+  BIKE: 'Bike',
+  CAR: 'Car',
+}
 
 export default function PublishedToursPage() {
   const [tours, setTours] = useState<Tour[]>([])
@@ -30,7 +36,16 @@ export default function PublishedToursPage() {
                 <p className="blog-meta">
                   {tour.difficulty}
                   {tour.tags?.length > 0 && <> · {tour.tags.join(', ')}</>}
+                  {(tour.lengthKm ?? 0) > 0 && <> · {tour.lengthKm?.toFixed(1)} km</>}
+                  {tour.publishedAt && <> · Published: {new Date(tour.publishedAt).toLocaleDateString()}</>}
                 </p>
+                {tour.transportTimes && tour.transportTimes.length > 0 && (
+                  <p className="blog-meta" style={{ marginTop: 2 }}>
+                    {tour.transportTimes.map((tt, i) => (
+                      <span key={i}>{i > 0 ? ' · ' : ''}{TRANSPORT_LABELS[tt.transport]}: {tt.minutes} min</span>
+                    ))}
+                  </p>
+                )}
                 <p className="blog-excerpt">{tour.description.slice(0, 160)}{tour.description.length > 160 ? '…' : ''}</p>
               </div>
             </div>

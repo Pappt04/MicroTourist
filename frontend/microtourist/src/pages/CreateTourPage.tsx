@@ -2,12 +2,35 @@ import { useState, useCallback, useRef, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { createTour, addWaypoint, updateWaypoint, deleteWaypoint, type Waypoint } from '../api/tours'
+import { createTour, addWaypoint, updateWaypoint, deleteWaypoint, type Waypoint, type TransportTime, type TransportType } from '../api/tours'
 import { useAuth } from '../context/AuthContext'
 
 import { defaultIcon } from '../leafletSetup'
 
 const DIFFICULTIES = ['Easy', 'Medium', 'Hard']
+
+const TRANSPORT_LABELS: Record<TransportType, string> = {
+  WALKING: 'Walking',
+  BIKE: 'Bike',
+  CAR: 'Car',
+}
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function totalLengthKm(waypoints: Waypoint[]): number {
+  const sorted = waypoints.slice().sort((a, b) => a.orderIndex - b.orderIndex)
+  let total = 0
+  for (let i = 1; i < sorted.length; i++) {
+    total += haversineKm(sorted[i - 1].latitude, sorted[i - 1].longitude, sorted[i].latitude, sorted[i].longitude)
+  }
+  return total
+}
 
 interface PendingPin { lat: number; lng: number }
 
@@ -24,6 +47,9 @@ export default function CreateTourPage() {
   const [form, setForm] = useState({ title: '', description: '', difficulty: 'Easy', tags: '' })
   const [formError, setFormError] = useState('')
   const [formLoading, setFormLoading] = useState(false)
+  const [transportTimes, setTransportTimes] = useState<TransportTime[]>([])
+  const [ttTransport, setTtTransport] = useState<TransportType>('WALKING')
+  const [ttMinutes, setTtMinutes] = useState('')
 
   const [tourId, setTourId] = useState('')
   const [waypoints, setWaypoints] = useState<Waypoint[]>([])
@@ -72,6 +98,10 @@ export default function CreateTourPage() {
     reader.readAsDataURL(file)
   }
 
+  function handleRemoveTt(index: number) {
+    setTransportTimes(tt => tt.filter((_, i) => i !== index))
+  }
+
   async function handleCreateTour(e: React.FormEvent) {
     e.preventDefault(); setFormError('')
     if (!form.title.trim()) return setFormError('Title is required')
@@ -79,7 +109,7 @@ export default function CreateTourPage() {
     const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean)
     setFormLoading(true)
     try {
-      const created = await createTour({ title: form.title.trim(), description: form.description.trim(), difficulty: form.difficulty, tags })
+      const created = await createTour({ title: form.title.trim(), description: form.description.trim(), difficulty: form.difficulty, tags, transportTimes })
       setTourId(created.id); setStep(2)
     } catch (err: any) {
       setFormError(err?.error ?? 'Could not create tour')
@@ -141,6 +171,10 @@ export default function CreateTourPage() {
     .slice().sort((a, b) => a.orderIndex - b.orderIndex)
     .map(wp => [wp.latitude, wp.longitude])
 
+  const usedTtTypes = new Set(transportTimes.map(tt => tt.transport))
+  const availableTtTypes = (['WALKING', 'BIKE', 'CAR'] as TransportType[]).filter(t => !usedTtTypes.has(t))
+  const activeTtTransport: TransportType = availableTtTypes.includes(ttTransport) ? ttTransport : (availableTtTypes[0] ?? 'WALKING')
+
   if (step === 1) {
     return (
       <div className="card" style={{ maxWidth: 560 }}>
@@ -157,6 +191,29 @@ export default function CreateTourPage() {
           </select>
           <label>Tags <span style={{ fontWeight: 400, color: '#888' }}>(comma-separated)</span></label>
           <input value={form.tags} onChange={e => setField('tags', e.target.value)} placeholder="e.g. hiking, nature, city" />
+
+          <label style={{ marginTop: 12 }}>Transport Times</label>
+          {transportTimes.map((tt, i) => (
+            <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginRight: 8, marginBottom: 4, background: '#f5f5f5', borderRadius: 12, padding: '2px 10px', fontSize: '0.82rem' }}>
+              {TRANSPORT_LABELS[tt.transport]}: {tt.minutes} min
+              <button type="button" onClick={() => handleRemoveTt(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999', padding: '0 2px', fontSize: '0.75rem' }}>✕</button>
+            </div>
+          ))}
+          {availableTtTypes.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+              <select value={activeTtTransport} onChange={e => setTtTransport(e.target.value as TransportType)} style={{ flex: 1 }}>
+                {availableTtTypes.map(t => <option key={t} value={t}>{TRANSPORT_LABELS[t]}</option>)}
+              </select>
+              <input type="number" min="1" placeholder="minutes" value={ttMinutes} onChange={e => setTtMinutes(e.target.value)} style={{ width: 90 }} />
+              <button type="button" className="secondary" onClick={() => {
+                const mins = parseInt(ttMinutes)
+                if (!mins || mins <= 0) return
+                setTransportTimes(tt => [...tt, { transport: activeTtTransport, minutes: mins }])
+                setTtMinutes('')
+              }}>+ Add</button>
+            </div>
+          )}
+
           <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
             <button type="submit" disabled={formLoading}>{formLoading ? 'Creating...' : 'Next: Add Waypoints'}</button>
             <button type="button" className="secondary" onClick={() => navigate('/my-tours')}>Cancel</button>
@@ -168,6 +225,8 @@ export default function CreateTourPage() {
 
   const isEditMode = !!editingWp
 
+  const lengthKm = totalLengthKm(waypoints)
+
   return (
     <div style={{ maxWidth: 960, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
@@ -177,6 +236,11 @@ export default function CreateTourPage() {
             ? `Editing "${editingWp!.name}" — click map to reposition`
             : 'Click on the map to place a waypoint'}
         </span>
+        {lengthKm > 0 && (
+          <span style={{ marginLeft: 'auto', fontSize: '0.9rem', fontWeight: 600, color: '#2e7d32', background: '#e6f4ea', padding: '3px 10px', borderRadius: 12 }}>
+            {lengthKm.toFixed(1)} km
+          </span>
+        )}
         {isEditMode && (
           <button className="secondary" style={{ marginLeft: 'auto', fontSize: '0.85rem' }} onClick={cancelEdit}>
             Cancel Edit

@@ -75,7 +75,11 @@ public class TourController {
         if (user == null) return ResponseEntity.status(401).body(Map.of("error", "authentication required"));
         Tour existing = tourService.getById(id);
         if (!existing.getAuthorId().equals(user.userId())) return ResponseEntity.status(403).body(Map.of("error", "forbidden"));
-        return ResponseEntity.ok(tourService.publish(id));
+        try {
+            return ResponseEntity.ok(tourService.publish(id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}/archive")
@@ -84,7 +88,24 @@ public class TourController {
         if (user == null) return ResponseEntity.status(401).body(Map.of("error", "authentication required"));
         Tour existing = tourService.getById(id);
         if (!existing.getAuthorId().equals(user.userId())) return ResponseEntity.status(403).body(Map.of("error", "forbidden"));
-        return ResponseEntity.ok(tourService.archive(id));
+        try {
+            return ResponseEntity.ok(tourService.archive(id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/reactivate")
+    public ResponseEntity<?> reactivate(@PathVariable String id, HttpServletRequest req) {
+        TokenUtil.TokenPayload user = auth(req);
+        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "authentication required"));
+        Tour existing = tourService.getById(id);
+        if (!existing.getAuthorId().equals(user.userId())) return ResponseEntity.status(403).body(Map.of("error", "forbidden"));
+        try {
+            return ResponseEntity.ok(tourService.reactivate(id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     @DeleteMapping("/{id}")

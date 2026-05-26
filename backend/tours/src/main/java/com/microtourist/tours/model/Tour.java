@@ -3,6 +3,7 @@ package com.microtourist.tours.model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Document(collection = "tours")
@@ -19,6 +20,10 @@ public class Tour {
     private Long authorId;
     private LocalDateTime createdAt = LocalDateTime.now();
     private List<String> tags;
+    private LocalDateTime publishedAt;
+    private LocalDateTime archivedAt;
+    private double lengthKm;
+    private List<TransportTime> transportTimes = new ArrayList<>();
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -38,4 +43,12 @@ public class Tour {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public List<String> getTags() { return tags; }
     public void setTags(List<String> tags) { this.tags = tags; }
+    public LocalDateTime getPublishedAt() { return publishedAt; }
+    public void setPublishedAt(LocalDateTime publishedAt) { this.publishedAt = publishedAt; }
+    public LocalDateTime getArchivedAt() { return archivedAt; }
+    public void setArchivedAt(LocalDateTime archivedAt) { this.archivedAt = archivedAt; }
+    public double getLengthKm() { return lengthKm; }
+    public void setLengthKm(double lengthKm) { this.lengthKm = lengthKm; }
+    public List<TransportTime> getTransportTimes() { return transportTimes; }
+    public void setTransportTimes(List<TransportTime> transportTimes) { this.transportTimes = transportTimes; }
 }

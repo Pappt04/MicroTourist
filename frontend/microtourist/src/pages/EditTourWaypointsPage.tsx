@@ -6,6 +6,23 @@ import { getTour, getWaypoints, addWaypoint, updateWaypoint, deleteWaypoint, typ
 import { useAuth } from '../context/AuthContext'
 import { defaultIcon } from '../leafletSetup'
 
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function totalLengthKm(waypoints: Waypoint[]): number {
+  const s = waypoints.slice().sort((a, b) => a.orderIndex - b.orderIndex)
+  let total = 0
+  for (let i = 1; i < s.length; i++) {
+    total += haversineKm(s[i - 1].latitude, s[i - 1].longitude, s[i].latitude, s[i].longitude)
+  }
+  return total
+}
+
 interface PendingPin { lat: number; lng: number }
 
 function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
@@ -125,6 +142,7 @@ export default function EditTourWaypointsPage() {
   const routePositions: [number, number][] = sorted.map(wp => [wp.latitude, wp.longitude])
   const mapCenter: [number, number] = sorted.length > 0 ? [sorted[0].latitude, sorted[0].longitude] : [44.0, 21.0]
   const isEditMode = !!editingWp
+  const lengthKm = totalLengthKm(waypoints)
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto' }}>
@@ -133,6 +151,11 @@ export default function EditTourWaypointsPage() {
         <span style={{ color: '#888', fontSize: '0.9rem' }}>
           {isEditMode ? `Editing "${editingWp!.name}" — click map to reposition` : 'Click on the map to add a waypoint'}
         </span>
+        {lengthKm > 0 && (
+          <span style={{ marginLeft: 'auto', fontSize: '0.9rem', fontWeight: 600, color: '#2e7d32', background: '#e6f4ea', padding: '3px 10px', borderRadius: 12 }}>
+            {lengthKm.toFixed(1)} km
+          </span>
+        )}
         {isEditMode && (
           <button className="secondary" style={{ marginLeft: 'auto', fontSize: '0.85rem' }} onClick={cancelEdit}>
             Cancel Edit
