@@ -43,7 +43,7 @@ export default function BlogsPage() {
 
   async function loadFollowStates(blogList: Blog[]) {
     if (!token || !account) return
-    const authorIds = [...new Set(blogList.map(b => b.author_id).filter(id => id !== account.id))]
+    const authorIds = [...new Set(blogList.map(b => b.author_id).filter(id => id != null && id !== account.id))]
     const results = await Promise.allSettled(authorIds.map(id => isFollowing(id)))
     const map: Record<number, boolean> = {}
     authorIds.forEach((id, i) => {

@@ -59,6 +59,7 @@ services:
       MONGO_URI: mongodb://mongo:27017
       MONGO_DB: ${MONGO_DB:-microtourist_blog}
       TOKEN_SECRET: ${TOKEN_SECRET:-changeme}
+      FOLLOWERS_URL: http://followers:8083
     depends_on:
       mongo:
         condition: service_healthy
