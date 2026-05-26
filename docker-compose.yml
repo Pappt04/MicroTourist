@@ -43,8 +43,11 @@ services:
       - microtourist
     environment:
       STAKEHOLDERS_GRPC_ADDR: stakeholders:9090
+      TOURS_GRPC_ADDR: tours:9091
+      TOURS_HTTP_URL: http://tours:8084
     depends_on:
       - stakeholders
+      - tours
 
   # ── Blog (Python + MongoDB) ───────────────────────────────────────────────
   mongo:
@@ -145,6 +148,8 @@ services:
       MONGO_DB: ${TOURS_MONGO_DB:-microtourist_tours}
       TOKEN_SECRET: ${TOKEN_SECRET:-changeme}
       PURCHASE_SERVICE_URL: http://purchase:8082
+    ports:
+      - "9091:9091"
     depends_on:
       mongo:
         condition: service_healthy

@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package tours;
+
+option java_package = "com.microtourist.tours.grpc";
+option java_outer_classname = "ToursProto";
+option java_multiple_files = true;
+
+service ToursService {
+    rpc GetPublishedTours (Empty) returns (TourListResponse);
+    rpc GetTourById (TourByIdRequest) returns (TourResponse);
+}
+
+message Empty {}
+
+message TourByIdRequest {
+    string id = 1;
+}
+
+message TransportTimeMsg {
+    string transport = 1;
+    int32 minutes = 2;
+}
+
+message TourMessage {
+    string id = 1;
+    string title = 2;
+    string description = 3;
+    string difficulty = 4;
+    string status = 5;
+    double price = 6;
+    int64 author_id = 7;
+    repeated string tags = 8;
+    double length_km = 9;
+    repeated TransportTimeMsg transport_times = 10;
+    int32 purchase_count = 11;
+    string created_at = 12;
+    string published_at = 13;
+    string archived_at = 14;
+}
+
+message TourListResponse {
+    repeated TourMessage tours = 1;
+}
+
+message TourResponse {
+    TourMessage tour = 1;
+    string error = 2;
+}

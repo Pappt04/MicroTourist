@@ -11,7 +11,7 @@ RUN mkdir -p /out && \
     protoc \
       --go_out=/out --go_opt=paths=source_relative \
       --go-grpc_out=/out --go-grpc_opt=paths=source_relative \
-      stakeholders.proto
+      stakeholders.proto tours.proto
 
 # ── build stage ───────────────────────────────────────────────────────────────
 FROM golang:1.22-alpine AS builder
