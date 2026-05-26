@@ -174,4 +174,14 @@ public class TourService {
     public Optional<TouristPosition> getPosition(Long userId) {
         return positionRepo.findByUserId(userId);
     }
+
+    /** Called by Checkout SAGA Step 3 — increments purchaseCount for each bought tour. */
+    public void recordPurchases(Long touristId, List<String> tourIds) {
+        for (String tourId : tourIds) {
+            tourRepo.findById(tourId).ifPresent(t -> {
+                t.setPurchaseCount(t.getPurchaseCount() + 1);
+                tourRepo.save(t);
+            });
+        }
+    }
 }

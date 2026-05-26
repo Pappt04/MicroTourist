@@ -24,6 +24,7 @@ public class Tour {
     private LocalDateTime archivedAt;
     private double lengthKm;
     private List<TransportTime> transportTimes = new ArrayList<>();
+    private int purchaseCount = 0;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -51,4 +52,6 @@ public class Tour {
     public void setLengthKm(double lengthKm) { this.lengthKm = lengthKm; }
     public List<TransportTime> getTransportTimes() { return transportTimes; }
     public void setTransportTimes(List<TransportTime> transportTimes) { this.transportTimes = transportTimes; }
+    public int getPurchaseCount() { return purchaseCount; }
+    public void setPurchaseCount(int purchaseCount) { this.purchaseCount = purchaseCount; }
 }

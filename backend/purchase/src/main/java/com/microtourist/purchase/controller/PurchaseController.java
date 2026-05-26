@@ -1,5 +1,6 @@
 package com.microtourist.purchase.controller;
 
+import com.microtourist.purchase.saga.CheckoutSagaOrchestrator;
 import com.microtourist.purchase.service.PurchaseService;
 import com.microtourist.purchase.util.TokenUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,10 +14,14 @@ import java.util.Map;
 public class PurchaseController {
 
     private final PurchaseService purchaseService;
+    private final CheckoutSagaOrchestrator checkoutSaga;
     private final TokenUtil tokenUtil;
 
-    public PurchaseController(PurchaseService purchaseService, TokenUtil tokenUtil) {
+    public PurchaseController(PurchaseService purchaseService,
+                               CheckoutSagaOrchestrator checkoutSaga,
+                               TokenUtil tokenUtil) {
         this.purchaseService = purchaseService;
+        this.checkoutSaga = checkoutSaga;
         this.tokenUtil = tokenUtil;
     }
 
@@ -58,6 +63,7 @@ public class PurchaseController {
         return ResponseEntity.ok(purchaseService.removeItem(user.userId(), tourId));
     }
 
+    /** SAGA-based checkout: validates tours, commits locally, notifies Tours service. */
     @PostMapping("/cart/checkout")
     public ResponseEntity<?> checkout(HttpServletRequest req) {
         TokenUtil.TokenPayload user = auth(req);
@@ -65,7 +71,7 @@ public class PurchaseController {
         if (!"tourist".equals(user.role())) return ResponseEntity.status(403).body(Map.of("error", "only tourists can checkout"));
 
         try {
-            return ResponseEntity.ok(purchaseService.checkout(user.userId()));
+            return ResponseEntity.ok(checkoutSaga.execute(user.userId()));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -76,5 +82,15 @@ public class PurchaseController {
         TokenUtil.TokenPayload user = auth(req);
         if (user == null) return ResponseEntity.status(401).body(Map.of("error", "authentication required"));
         return ResponseEntity.ok(purchaseService.getPurchasedTourIds(user.userId()));
+    }
+
+    /**
+     * Internal endpoint — called by Tour Archive SAGA to remove an archived tour
+     * from all active shopping carts.
+     */
+    @DeleteMapping("/internal/carts/tour/{tourId}")
+    public ResponseEntity<?> removeTourFromAllCarts(@PathVariable String tourId) {
+        purchaseService.removeTourFromAllCarts(tourId);
+        return ResponseEntity.ok(Map.of("message", "tour removed from all carts"));
     }
 }

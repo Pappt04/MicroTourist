@@ -116,4 +116,17 @@ public class PurchaseService {
                 .map(TourPurchaseToken::getTourId)
                 .collect(Collectors.toList());
     }
+
+    /** Called by Tour Archive SAGA — removes an archived tour from every active cart. */
+    @Transactional
+    public void removeTourFromAllCarts(String tourId) {
+        List<ShoppingCart> allCarts = cartRepo.findAll();
+        for (ShoppingCart cart : allCarts) {
+            boolean removed = cart.getItems().removeIf(i -> i.getTourId().equals(tourId));
+            if (removed) {
+                cart.setTotalPrice(cart.getItems().stream().mapToDouble(OrderItem::getPrice).sum());
+                cartRepo.save(cart);
+            }
+        }
+    }
 }

@@ -3,6 +3,7 @@ package com.microtourist.tours.controller;
 import com.microtourist.tours.model.Review;
 import com.microtourist.tours.model.Tour;
 import com.microtourist.tours.model.Waypoint;
+import com.microtourist.tours.saga.ArchiveSagaOrchestrator;
 import com.microtourist.tours.service.TourService;
 import com.microtourist.tours.util.TokenUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,10 +19,12 @@ import java.util.Map;
 public class TourController {
 
     private final TourService tourService;
+    private final ArchiveSagaOrchestrator archiveSaga;
     private final TokenUtil tokenUtil;
 
-    public TourController(TourService tourService, TokenUtil tokenUtil) {
+    public TourController(TourService tourService, ArchiveSagaOrchestrator archiveSaga, TokenUtil tokenUtil) {
         this.tourService = tourService;
+        this.archiveSaga = archiveSaga;
         this.tokenUtil = tokenUtil;
     }
 
@@ -82,6 +85,7 @@ public class TourController {
         }
     }
 
+    /** SAGA-based archive: archives locally then removes from all carts via Purchase service. */
     @PutMapping("/{id}/archive")
     public ResponseEntity<?> archive(@PathVariable String id, HttpServletRequest req) {
         TokenUtil.TokenPayload user = auth(req);
@@ -89,7 +93,7 @@ public class TourController {
         Tour existing = tourService.getById(id);
         if (!existing.getAuthorId().equals(user.userId())) return ResponseEntity.status(403).body(Map.of("error", "forbidden"));
         try {
-            return ResponseEntity.ok(tourService.archive(id));
+            return ResponseEntity.ok(archiveSaga.execute(id));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -163,5 +167,18 @@ public class TourController {
         return tourService.getPosition(user.userId())
                 .<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElse(ResponseEntity.ok(Map.of()));
+    }
+
+    /**
+     * Internal endpoint — called by Checkout SAGA Step 3 to increment purchaseCount
+     * for each purchased tour.
+     */
+    @PostMapping("/internal/record-purchases")
+    public ResponseEntity<?> recordPurchases(@RequestBody Map<String, Object> body) {
+        Long touristId = Long.parseLong(body.get("touristId").toString());
+        @SuppressWarnings("unchecked")
+        List<String> tourIds = (List<String>) body.get("tourIds");
+        tourService.recordPurchases(touristId, tourIds);
+        return ResponseEntity.ok(Map.of("message", "purchases recorded"));
     }
 }

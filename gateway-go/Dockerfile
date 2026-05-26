@@ -22,7 +22,7 @@ COPY go.mod ./
 COPY . .
 COPY --from=proto-gen /out/ ./pb/
 
-RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -o stakeholders .
+RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -o rpc-gateway .
 
 # ── runtime stage ─────────────────────────────────────────────────────────────
 FROM alpine:3.19
@@ -30,8 +30,8 @@ FROM alpine:3.19
 RUN apk --no-cache add ca-certificates
 
 WORKDIR /app
-COPY --from=builder /app/stakeholders .
+COPY --from=builder /app/rpc-gateway .
 
-EXPOSE 8080 9090
+EXPOSE 8086
 
-ENTRYPOINT ["/app/stakeholders"]
+ENTRYPOINT ["/app/rpc-gateway"]

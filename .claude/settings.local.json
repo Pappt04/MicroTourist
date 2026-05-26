@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /Users/paun/IdeaProjects/MicroTourist/backend/stakeholders/proto)",
+      "Bash(mkdir -p /Users/paun/IdeaProjects/MicroTourist/gateway-go/proto)",
+      "Bash(mkdir -p /Users/paun/IdeaProjects/MicroTourist/gateway-go)"
+    ]
+  }
+}
