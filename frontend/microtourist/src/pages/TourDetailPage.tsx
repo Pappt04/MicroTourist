@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, type ChangeEvent } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { getTour, getReviews, addReview, getWaypoints, type Tour, type Review, type Waypoint, type TransportType } from '../api/tours'
+import { getPurchasedTourIds, addToCart } from '../api/purchase'
 import { useAuth } from '../context/AuthContext'
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -23,11 +24,17 @@ function Stars({ rating }: { rating: number }) {
 export default function TourDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { account } = useAuth()
+  const navigate = useNavigate()
 
   const [tour, setTour] = useState<Tour | null>(null)
   const [waypoints, setWaypoints] = useState<Waypoint[]>([])
   const [reviews, setReviews] = useState<Review[]>([])
   const [error, setError] = useState('')
+
+  const [purchasedIds, setPurchasedIds] = useState<string[]>([])
+  const [cartTourIds, setCartTourIds] = useState<string[]>([])
+  const [cartError, setCartError] = useState('')
+  const [cartLoading, setCartLoading] = useState(false)
 
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ rating: 5, comment: '', visitDate: '' })
@@ -42,6 +49,18 @@ export default function TourDetailPage() {
       .then(([t, r, w]) => { setTour(t); setReviews(r); setWaypoints(w) })
       .catch(() => setError('Could not load tour'))
   }, [id])
+
+  useEffect(() => {
+    if (account?.role !== 'tourist') return
+    getPurchasedTourIds()
+      .then(setPurchasedIds)
+      .catch(() => {})
+    import('../api/purchase').then(({ getCart }) =>
+      getCart()
+        .then(cart => setCartTourIds(cart.items.map(i => i.tourId)))
+        .catch(() => {})
+    )
+  }, [account])
 
   function handleImageFiles(e: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
@@ -73,16 +92,57 @@ export default function TourDetailPage() {
     }
   }
 
+  async function handleAddToCart() {
+    if (!tour) return
+    setCartError('')
+    setCartLoading(true)
+    try {
+      const updated = await addToCart(tour.id, tour.title, tour.price)
+      setCartTourIds(updated.items.map(i => i.tourId))
+    } catch (e: any) {
+      setCartError(e?.error ?? 'Could not add to cart')
+    } finally {
+      setCartLoading(false)
+    }
+  }
+
   if (error) return <div className="card"><p className="error">{error}</p></div>
   if (!tour) return <div className="card"><p>Loading...</p></div>
 
+  const isTourist = account?.role === 'tourist'
+  const isPurchased = isTourist && purchasedIds.includes(tour.id)
+  const isInCart = isTourist && cartTourIds.includes(tour.id)
+  const canAddToCart = isTourist && tour.status === 'PUBLISHED' && !isPurchased && !isInCart
   const canReview = account?.role === 'tourist'
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto' }}>
-      {/* Tour info */}
       <div className="card">
-        <h2 style={{ marginTop: 0 }}>{tour.title}</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+          <h2 style={{ marginTop: 0, marginBottom: 4 }}>{tour.title}</h2>
+          {isTourist && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#16a34a' }}>
+                ${tour.price.toFixed(2)}
+              </span>
+              {isPurchased ? (
+                <span style={{ background: '#dcfce7', color: '#15803d', padding: '4px 10px', borderRadius: 20, fontSize: '0.85rem', fontWeight: 600 }}>
+                  Purchased
+                </span>
+              ) : isInCart ? (
+                <button className="secondary" onClick={() => navigate('/cart')}>View Cart</button>
+              ) : canAddToCart ? (
+                <button onClick={handleAddToCart} disabled={cartLoading}>
+                  {cartLoading ? 'Adding...' : 'Add to Cart'}
+                </button>
+              ) : tour.status === 'ARCHIVED' ? (
+                <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Archived — not for sale</span>
+              ) : null}
+            </div>
+          )}
+        </div>
+        {cartError && <p className="error" style={{ margin: '4px 0 8px' }}>{cartError}</p>}
+
         <p className="blog-meta">
           {tour.difficulty}
           {tour.tags?.length > 0 && <> · {tour.tags.join(', ')}</>}
@@ -100,18 +160,20 @@ export default function TourDetailPage() {
 
         {waypoints.length > 0 && (() => {
           const sorted = waypoints.slice().sort((a, b) => a.orderIndex - b.orderIndex)
-          const isTourist = account?.role === 'tourist'
-          const visible = isTourist ? sorted.slice(0, 1) : sorted
+          const showAll = !isTourist || isPurchased
+          const visible = showAll ? sorted : sorted.slice(0, 1)
           const center: [number, number] = [sorted[0].latitude, sorted[0].longitude]
           const route: [number, number][] = visible.map(wp => [wp.latitude, wp.longitude])
           return (
             <div style={{ marginTop: 16 }}>
               <p style={{ margin: '0 0 8px', fontWeight: 600 }}>
-                {isTourist ? 'Starting Point' : `Route (${waypoints.length} waypoints)`}
+                {showAll ? `Route (${waypoints.length} waypoints)` : 'Starting Point'}
               </p>
-              {isTourist && (
+              {!showAll && (
                 <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: '#888' }}>
-                  Purchase this tour to unlock all waypoints.
+                  {isInCart
+                    ? 'Complete checkout to unlock all waypoints.'
+                    : 'Purchase this tour to unlock all waypoints.'}
                 </p>
               )}
               <div style={{ height: 320, borderRadius: 8, overflow: 'hidden', border: '1px solid #e0e0e0', marginBottom: 12 }}>
@@ -151,7 +213,6 @@ export default function TourDetailPage() {
           )}
         </div>
 
-        {/* Review form */}
         {showForm && (
           <div className="card" style={{ marginBottom: 16 }}>
             <h4 style={{ marginTop: 0 }}>Your Review</h4>
@@ -222,7 +283,6 @@ export default function TourDetailPage() {
           </div>
         )}
 
-        {/* Reviews list */}
         {reviews.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--muted)' }}>
             <p style={{ margin: 0 }}>No reviews yet. Be the first!</p>

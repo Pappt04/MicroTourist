@@ -35,6 +35,10 @@ export default function MyToursPage() {
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState('')
 
+  const [publishingTourId, setPublishingTourId] = useState<string | null>(null)
+  const [publishPrice, setPublishPrice] = useState('0')
+  const [publishLoading, setPublishLoading] = useState(false)
+
   useEffect(() => {
     getMyTours().then(loaded => {
       setTours(loaded)
@@ -100,10 +104,26 @@ export default function MyToursPage() {
     }
   }
 
-  async function handlePublish(id: string) {
+  function startPublish(id: string) {
+    setPublishingTourId(id)
+    setPublishPrice('0')
     clearStatusError(id)
-    try { setTourInState(await publishTour(id)) }
-    catch (err: any) { setStatusError(id, err?.error ?? 'Could not publish tour') }
+  }
+
+  async function confirmPublish(tour: Tour) {
+    const price = parseFloat(publishPrice)
+    if (isNaN(price) || price < 0) return
+    setPublishLoading(true)
+    clearStatusError(tour.id)
+    try {
+      await updateTour(tour.id, { price, transportTimes: tour.transportTimes ?? [] })
+      setTourInState(await publishTour(tour.id))
+      setPublishingTourId(null)
+    } catch (err: any) {
+      setStatusError(tour.id, err?.error ?? 'Could not publish tour')
+    } finally {
+      setPublishLoading(false)
+    }
   }
 
   async function handleArchive(id: string) {
@@ -331,6 +351,35 @@ export default function MyToursPage() {
                   <p className="error" style={{ margin: '4px 0' }}>{statusErrors[tour.id]}</p>
                 )}
 
+                {/* Publish price form */}
+                {!isEditing && publishingTourId === tour.id && (
+                  <div style={{ marginBottom: 8, padding: '10px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8 }}>
+                    <p style={{ margin: '0 0 8px', fontWeight: 600, fontSize: '0.9rem' }}>Set tour price before publishing</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: '0.85rem', color: '#555' }}>Price ($)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={publishPrice}
+                        onChange={e => setPublishPrice(e.target.value)}
+                        style={{ width: 90, fontSize: '0.9rem', padding: '4px 8px' }}
+                        placeholder="0 = free"
+                        autoFocus
+                      />
+                      <button
+                        className="sm"
+                        style={{ background: '#2e7d32', color: '#fff', border: 'none' }}
+                        disabled={publishLoading}
+                        onClick={() => confirmPublish(tour)}
+                      >
+                        {publishLoading ? 'Publishing...' : 'Confirm & Publish'}
+                      </button>
+                      <button className="secondary sm" onClick={() => setPublishingTourId(null)}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Action buttons */}
                 {!isEditing && (
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -338,8 +387,8 @@ export default function MyToursPage() {
                       <button className="secondary sm" onClick={() => startEdit(tour)}>Edit Info</button>
                     )}
                     <button className="secondary sm" onClick={() => navigate(`/tours/${tour.id}/waypoints`)}>Edit Waypoints</button>
-                    {tour.status === 'DRAFT' && (
-                      <button className="sm" style={{ background: '#2e7d32', color: '#fff', border: 'none' }} onClick={() => handlePublish(tour.id)}>Publish</button>
+                    {tour.status === 'DRAFT' && publishingTourId !== tour.id && (
+                      <button className="sm" style={{ background: '#2e7d32', color: '#fff', border: 'none' }} onClick={() => startPublish(tour.id)}>Publish</button>
                     )}
                     {tour.status === 'PUBLISHED' && (
                       <button className="secondary sm" onClick={() => handleArchive(tour.id)}>Archive</button>

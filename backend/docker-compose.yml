@@ -96,9 +96,12 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       DB_NAME: ${PURCHASE_DB_NAME:-microtourist-purchase}
       TOKEN_SECRET: ${TOKEN_SECRET:-dev-secret-change-me}
+      TOURS_SERVICE_URL: http://tours:8084
     depends_on:
       postgres:
         condition: service_healthy
+      tours:
+        condition: service_started
 
   tours:
     build: ./tours

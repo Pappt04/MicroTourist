@@ -38,6 +38,9 @@ export default function PublishedToursPage() {
                   {tour.tags?.length > 0 && <> · {tour.tags.join(', ')}</>}
                   {(tour.lengthKm ?? 0) > 0 && <> · {tour.lengthKm?.toFixed(1)} km</>}
                   {tour.publishedAt && <> · Published: {new Date(tour.publishedAt).toLocaleDateString()}</>}
+                  {tour.price > 0
+                    ? <> · <span style={{ color: '#16a34a', fontWeight: 600 }}>${tour.price.toFixed(2)}</span></>
+                    : <> · <span style={{ color: '#16a34a', fontWeight: 600 }}>Free</span></>}
                 </p>
                 {tour.transportTimes && tour.transportTimes.length > 0 && (
                   <p className="blog-meta" style={{ marginTop: 2 }}>

@@ -14,6 +14,7 @@ import PublishedToursPage from './pages/PublishedToursPage'
 import TourDetailPage from './pages/TourDetailPage'
 import EditTourWaypointsPage from './pages/EditTourWaypointsPage'
 import PositionSimulatorPage from './pages/PositionSimulatorPage'
+import ShoppingCartPage from './pages/ShoppingCartPage'
 import './App.css'
 
 function Navbar() {
@@ -36,6 +37,7 @@ function Navbar() {
             {account.role !== 'administrator' && <Link to="/profile">Profile</Link>}
             {account.role !== 'administrator' && <Link to="/people">People</Link>}
             {account.role === 'tourist' && <Link to="/tours">Tours</Link>}
+            {account.role === 'tourist' && <Link to="/cart">Cart</Link>}
             {account.role === 'tourist' && <Link to="/simulator">Simulator</Link>}
             {account.role === 'guide' && <Link to="/my-tours">My Tours</Link>}
             {account.role === 'administrator' && <Link to="/admin">Admin</Link>}
@@ -75,6 +77,7 @@ function Layout() {
           <Route path="/tours/:id" element={<TourDetailPage />} />
           <Route path="/tours/:id/waypoints" element={<EditTourWaypointsPage />} />
           <Route path="/simulator" element={<PositionSimulatorPage />} />
+          <Route path="/cart" element={<ShoppingCartPage />} />
         </Routes>
       </main>
     </>

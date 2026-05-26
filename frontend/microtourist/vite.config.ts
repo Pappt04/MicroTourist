@@ -17,6 +17,10 @@ export default defineConfig({
         target: 'http://localhost:8083',
         rewrite: path => path.replace(/^\/api\/followers/, ''),
       },
+      '/api/purchase': {
+        target: 'http://localhost:8082',
+        rewrite: path => path.replace(/^\/api\/purchase/, ''),
+      },
       '/api/tours': {
         target: 'http://localhost:8084',
         rewrite: path => path.replace(/^\/api/, ''),

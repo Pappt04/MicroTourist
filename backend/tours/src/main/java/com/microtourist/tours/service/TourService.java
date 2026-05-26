@@ -11,6 +11,7 @@ import com.microtourist.tours.repository.WaypointRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -68,14 +69,14 @@ public class TourService {
         if (tour.getTransportTimes() == null || tour.getTransportTimes().isEmpty())
             throw new RuntimeException("Tour must have at least one transport time defined");
         tour.setStatus("PUBLISHED");
-        tour.setPublishedAt(LocalDateTime.now());
+        tour.setPublishedAt(LocalDateTime.now(ZoneId.of("Europe/Belgrade")));
         return tourRepo.save(tour);
     }
 
     public Tour archive(String id) {
         Tour tour = getById(id);
         tour.setStatus("ARCHIVED");
-        tour.setArchivedAt(LocalDateTime.now());
+        tour.setArchivedAt(LocalDateTime.now(ZoneId.of("Europe/Belgrade")));
         return tourRepo.save(tour);
     }
 
@@ -84,7 +85,7 @@ public class TourService {
         if (!"ARCHIVED".equals(tour.getStatus()))
             throw new RuntimeException("Only archived tours can be reactivated");
         tour.setStatus("PUBLISHED");
-        tour.setPublishedAt(LocalDateTime.now());
+        tour.setPublishedAt(LocalDateTime.now(ZoneId.of("Europe/Belgrade")));
         tour.setArchivedAt(null);
         return tourRepo.save(tour);
     }
@@ -166,7 +167,7 @@ public class TourService {
         pos.setUserId(userId);
         pos.setLatitude(lat);
         pos.setLongitude(lng);
-        pos.setUpdatedAt(LocalDateTime.now());
+        pos.setUpdatedAt(LocalDateTime.now(ZoneId.of("Europe/Belgrade")));
         return positionRepo.save(pos);
     }
 
