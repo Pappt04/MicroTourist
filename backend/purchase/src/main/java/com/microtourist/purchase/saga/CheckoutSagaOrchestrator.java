@@ -91,7 +91,7 @@ public class CheckoutSagaOrchestrator {
     private void sagaStep3_recordPurchases(Long touristId, List<CartItemSnapshot> items) {
         List<String> tourIds = items.stream().map(CartItemSnapshot::tourId).collect(Collectors.toList());
         restTemplate.postForObject(
-                toursUrl + "/internal/record-purchases",
+                toursUrl + "/tours/internal/record-purchases",
                 Map.of("touristId", touristId, "tourIds", tourIds),
                 Map.class);
     }

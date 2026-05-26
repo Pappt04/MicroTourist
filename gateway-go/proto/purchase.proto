@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package purchase;
+
+option go_package = "./pb";
+
+service PurchaseService {
+    rpc GetCart      (GetCartRequest)      returns (GetCartResponse);
+    rpc GetPurchases (GetPurchasesRequest) returns (GetPurchasesResponse);
+}
+
+message GetCartRequest {
+    int64 tourist_id = 1;
+}
+
+message OrderItemMsg {
+    int64  id        = 1;
+    string tour_id   = 2;
+    string tour_name = 3;
+    double price     = 4;
+}
+
+message GetCartResponse {
+    int64             id          = 1;
+    int64             tourist_id  = 2;
+    double            total_price = 3;
+    repeated OrderItemMsg items   = 4;
+}
+
+message GetPurchasesRequest {
+    int64 tourist_id = 1;
+}
+
+message GetPurchasesResponse {
+    repeated string tour_ids = 1;
+}

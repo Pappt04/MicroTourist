@@ -36,7 +36,7 @@ services:
       stakeholders_db:
         condition: service_healthy
 
-  # ── RPC Gateway (Go) — translates HTTP register/login to gRPC ────────────
+  # ── RPC Gateway (Go) — translates HTTP to gRPC for stakeholders, tours, purchase ─
   rpc-gateway:
     build: ./gateway-go
     networks:
@@ -45,9 +45,12 @@ services:
       STAKEHOLDERS_GRPC_ADDR: stakeholders:9090
       TOURS_GRPC_ADDR: tours:9091
       TOURS_HTTP_URL: http://tours:8084
+      PURCHASE_GRPC_ADDR: purchase:9092
+      TOKEN_SECRET: ${TOKEN_SECRET:-changeme}
     depends_on:
       - stakeholders
       - tours
+      - purchase
 
   # ── Blog (Python + MongoDB) ───────────────────────────────────────────────
   mongo:
@@ -148,8 +151,7 @@ services:
       MONGO_DB: ${TOURS_MONGO_DB:-microtourist_tours}
       TOKEN_SECRET: ${TOKEN_SECRET:-changeme}
       PURCHASE_SERVICE_URL: http://purchase:8082
-    ports:
-      - "9091:9091"
+    restart: on-failure
     depends_on:
       mongo:
         condition: service_healthy
@@ -159,6 +161,7 @@ services:
     build: ./frontend/microtourist
     networks:
       - microtourist
+    restart: on-failure
     depends_on:
       - stakeholders
       - blog
@@ -173,6 +176,7 @@ services:
       - "80:80"
     networks:
       - microtourist
+    restart: on-failure
     depends_on:
       - frontend
       - stakeholders
