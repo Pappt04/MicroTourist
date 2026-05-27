@@ -7,6 +7,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 8081
+RUN python -m grpc_tools.protoc -I./proto \
+    --python_out=. --grpc_python_out=. proto/blog.proto
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8081", "--workers", "2", "--access-logfile", "-", "app:app"]
+EXPOSE 8081 50051
+
+CMD ["gunicorn", "--bind", "0.0.0.0:8081", "--workers", "1", "--access-logfile", "-", "app:app"]

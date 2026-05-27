@@ -46,11 +46,13 @@ services:
       TOURS_GRPC_ADDR: tours:9091
       TOURS_HTTP_URL: http://tours:8084
       PURCHASE_GRPC_ADDR: purchase:9092
+      BLOG_GRPC_ADDR: blog:50051
       TOKEN_SECRET: ${TOKEN_SECRET:-changeme}
     depends_on:
       - stakeholders
       - tours
       - purchase
+      - blog
 
   # ── Blog (Python + MongoDB) ───────────────────────────────────────────────
   mongo:

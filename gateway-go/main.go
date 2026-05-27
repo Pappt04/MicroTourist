@@ -24,6 +24,7 @@ func main() {
 	stakeholdersAddr := getEnv("STAKEHOLDERS_GRPC_ADDR", "localhost:9090")
 	toursAddr := getEnv("TOURS_GRPC_ADDR", "localhost:9091")
 	purchaseAddr := getEnv("PURCHASE_GRPC_ADDR", "localhost:9092")
+	blogAddr := getEnv("BLOG_GRPC_ADDR", "localhost:50051")
 	toursHTTP := getEnv("TOURS_HTTP_URL", "http://localhost:8084")
 
 	stakeholdersConn, err := grpc.Dial(stakeholdersAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -44,9 +45,16 @@ func main() {
 	}
 	defer purchaseConn.Close()
 
+	blogConn, err := grpc.Dial(blogAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("cannot connect to blog gRPC: %v", err)
+	}
+	defer blogConn.Close()
+
 	stakeholdersClient := pb.NewStakeholdersServiceClient(stakeholdersConn)
 	toursClient := pb.NewToursServiceClient(toursConn)
 	purchaseClient := pb.NewPurchaseServiceClient(purchaseConn)
+	blogClient := pb.NewBlogServiceClient(blogConn)
 
 	mux := http.NewServeMux()
 
@@ -68,6 +76,10 @@ func main() {
 	// Purchase RPC routes (GET → gRPC)
 	mux.HandleFunc("GET /cart", handleGetCart(purchaseClient))
 	mux.HandleFunc("GET /purchases", handleGetPurchases(purchaseClient))
+
+	// Blog RPC routes (GET → gRPC)
+	mux.HandleFunc("GET /blogs", handleGetBlogs(blogClient))
+	mux.HandleFunc("GET /blogs/{id}", handleGetBlogById(blogClient))
 
 	log.Println("rpc-gateway listening on :8086")
 	if err := http.ListenAndServe(":8086", logMiddleware(mux)); err != nil {
@@ -355,6 +367,67 @@ func handleGetPurchases(client pb.PurchaseServiceClient) http.HandlerFunc {
 			tourIds = []string{}
 		}
 		writeJSON(w, 200, tourIds)
+	}
+}
+
+// ── Blog RPC handlers ─────────────────────────────────────────────────────────
+
+func handleGetBlogs(client pb.BlogServiceClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+		defer cancel()
+
+		resp, err := client.GetBlogs(ctx, &pb.GetBlogsRequest{})
+		if err != nil {
+			writeJSON(w, 500, map[string]string{"error": "gRPC call failed: " + err.Error()})
+			return
+		}
+
+		blogs := make([]map[string]any, 0, len(resp.Blogs))
+		for _, b := range resp.Blogs {
+			blogs = append(blogs, blogToMap(b))
+		}
+		writeJSON(w, 200, blogs)
+	}
+}
+
+func handleGetBlogById(client pb.BlogServiceClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+
+		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+		defer cancel()
+
+		resp, err := client.GetBlogById(ctx, &pb.GetBlogByIdRequest{Id: id})
+		if err != nil {
+			writeJSON(w, 500, map[string]string{"error": "gRPC call failed: " + err.Error()})
+			return
+		}
+		if resp.Error != "" {
+			code := 404
+			if resp.Error == "invalid blog id" {
+				code = 400
+			}
+			writeJSON(w, code, map[string]string{"error": resp.Error})
+			return
+		}
+
+		writeJSON(w, 200, blogToMap(resp.Blog))
+	}
+}
+
+func blogToMap(b *pb.BlogMessage) map[string]any {
+	images := make([]string, 0, len(b.Images))
+	images = append(images, b.Images...)
+	return map[string]any{
+		"id":              b.Id,
+		"title":           b.Title,
+		"description":     b.Description,
+		"author_id":       b.AuthorId,
+		"author_username": b.AuthorUsername,
+		"images":          images,
+		"like_count":      b.LikeCount,
+		"created_at":      b.CreatedAt,
 	}
 }
 
