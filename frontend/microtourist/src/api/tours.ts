@@ -161,3 +161,52 @@ export function getMyPosition(): Promise<TouristPosition | null> {
     .then(d => (d?.latitude != null ? d : null))
     .catch(() => null)
 }
+
+export interface WaypointVisit {
+  waypointId: string
+  completedAt: string
+}
+
+export interface TourExecution {
+  id: string
+  tourId: string
+  touristId: number
+  status: string
+  startedAt: string
+  startLatitude: number
+  startLongitude: number
+  completedAt?: string
+  abandonedAt?: string
+  lastActivity: string
+  visitedWaypoints: WaypointVisit[]
+}
+
+export function startTourExecution(tourId: string, latitude: number, longitude: number): Promise<TourExecution> {
+  return req(`/${tourId}/start`, {
+    method: 'POST',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ latitude, longitude }),
+  })
+}
+
+export function checkPosition(executionId: string, latitude: number, longitude: number): Promise<TourExecution> {
+  return req(`/executions/${executionId}/check-position`, {
+    method: 'PUT',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ latitude, longitude }),
+  })
+}
+
+export function completeExecution(executionId: string): Promise<TourExecution> {
+  return req(`/executions/${executionId}/complete`, { method: 'PUT', headers: authHeaders() })
+}
+
+export function abandonExecution(executionId: string): Promise<TourExecution> {
+  return req(`/executions/${executionId}/abandon`, { method: 'PUT', headers: authHeaders() })
+}
+
+export function getActiveExecution(): Promise<TourExecution | null> {
+  return req('/executions/active', { headers: authHeaders() })
+    .then(d => (d?.id ? d : null))
+    .catch(() => null)
+}

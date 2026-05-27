@@ -22,6 +22,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Eclipse / Spring Tool Suite
+.project
+.classpath
+.settings/
+
+# Maven build output
+target/
 CLAUDE.md
 
 # Environment files
