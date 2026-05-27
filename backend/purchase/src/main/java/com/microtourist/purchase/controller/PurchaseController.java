@@ -93,4 +93,11 @@ public class PurchaseController {
         purchaseService.removeTourFromAllCarts(tourId);
         return ResponseEntity.ok(Map.of("message", "tour removed from all carts"));
     }
+
+    /** Internal endpoint — called by Tours service to verify a tourist has purchased a tour. */
+    @GetMapping("/internal/purchases/check")
+    public ResponseEntity<?> checkPurchase(@org.springframework.web.bind.annotation.RequestParam Long touristId,
+                                           @org.springframework.web.bind.annotation.RequestParam String tourId) {
+        return ResponseEntity.ok(Map.of("purchased", purchaseService.isPurchased(touristId, tourId)));
+    }
 }

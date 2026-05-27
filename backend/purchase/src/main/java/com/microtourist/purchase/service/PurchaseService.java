@@ -117,6 +117,10 @@ public class PurchaseService {
                 .collect(Collectors.toList());
     }
 
+    public boolean isPurchased(Long touristId, String tourId) {
+        return tokenRepo.existsByTouristIdAndTourId(touristId, tourId);
+    }
+
     /** Called by Tour Archive SAGA — removes an archived tour from every active cart. */
     @Transactional
     public void removeTourFromAllCarts(String tourId) {

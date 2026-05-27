@@ -1,3 +1,5 @@
+import threading
+
 from flask import Flask, request, jsonify
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -8,10 +10,13 @@ from db import get_db
 from middleware import log_request, record_start_time, require_auth
 from comments import comments_bp
 from likes import likes_bp
+from grpc_server import serve as grpc_serve
 
 app = Flask(__name__)
 app.before_request(record_start_time)
 app.after_request(log_request)
+
+threading.Thread(target=grpc_serve, daemon=True).start()
 
 app.register_blueprint(comments_bp)
 app.register_blueprint(likes_bp)

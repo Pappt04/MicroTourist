@@ -77,6 +77,39 @@ func (s *grpcStakeholdersServer) Login(_ context.Context, req *pb.LoginRequest) 
 	}, nil
 }
 
+func (s *grpcStakeholdersServer) GetProfile(_ context.Context, req *pb.GetProfileRequest) (*pb.ProfileResponse, error) {
+	profile, err := getProfileByAccountID(s.db, int(req.AccountId))
+	if err != nil {
+		return &pb.ProfileResponse{Error: "could not fetch profile"}, nil
+	}
+	return &pb.ProfileResponse{
+		AccountId:      int64(profile.AccountID),
+		FirstName:      profile.FirstName,
+		LastName:       profile.LastName,
+		ProfilePicture: profile.ProfilePicture,
+		Bio:            profile.Bio,
+		Motto:          profile.Motto,
+	}, nil
+}
+
+func (s *grpcStakeholdersServer) GetAllAccounts(_ context.Context, _ *pb.GetAllAccountsRequest) (*pb.GetAllAccountsResponse, error) {
+	accounts, err := getAllAccounts(s.db)
+	if err != nil {
+		return &pb.GetAllAccountsResponse{Error: "could not fetch accounts"}, nil
+	}
+	msgs := make([]*pb.AccountMessage, 0, len(accounts))
+	for _, a := range accounts {
+		msgs = append(msgs, &pb.AccountMessage{
+			Id:        int64(a.ID),
+			Username:  a.Username,
+			Email:     a.Email,
+			Role:      string(a.Role),
+			IsBlocked: a.IsBlocked,
+		})
+	}
+	return &pb.GetAllAccountsResponse{Accounts: msgs}, nil
+}
+
 func startGRPCServer(db *sql.DB) {
 	lis, err := net.Listen("tcp", ":9090")
 	if err != nil {

@@ -15,6 +15,7 @@ import TourDetailPage from './pages/TourDetailPage'
 import EditTourWaypointsPage from './pages/EditTourWaypointsPage'
 import PositionSimulatorPage from './pages/PositionSimulatorPage'
 import ShoppingCartPage from './pages/ShoppingCartPage'
+import ActiveTourPage from './pages/ActiveTourPage'
 import './App.css'
 
 function Navbar() {
@@ -78,6 +79,7 @@ function Layout() {
           <Route path="/tours/:id/waypoints" element={<EditTourWaypointsPage />} />
           <Route path="/simulator" element={<PositionSimulatorPage />} />
           <Route path="/cart" element={<ShoppingCartPage />} />
+          <Route path="/executions/:id/active" element={<ActiveTourPage />} />
         </Routes>
       </main>
     </>

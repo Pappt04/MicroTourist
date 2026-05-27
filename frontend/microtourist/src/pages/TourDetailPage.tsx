@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type ChangeEvent } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getTour, getReviews, addReview, getWaypoints, type Tour, type Review, type Waypoint, type TransportType } from '../api/tours'
+import { getTour, getReviews, addReview, getWaypoints, getMyPosition, startTourExecution, getActiveExecution, type Tour, type Review, type Waypoint, type TransportType } from '../api/tours'
 import { getPurchasedTourIds, addToCart } from '../api/purchase'
 import { useAuth } from '../context/AuthContext'
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
@@ -35,6 +35,9 @@ export default function TourDetailPage() {
   const [cartTourIds, setCartTourIds] = useState<string[]>([])
   const [cartError, setCartError] = useState('')
   const [cartLoading, setCartLoading] = useState(false)
+  const [activeExecutionId, setActiveExecutionId] = useState<string | null>(null)
+  const [startLoading, setStartLoading] = useState(false)
+  const [startError, setStartError] = useState('')
 
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ rating: 5, comment: '', visitDate: '' })
@@ -60,6 +63,9 @@ export default function TourDetailPage() {
         .then(cart => setCartTourIds(cart.items.map(i => i.tourId)))
         .catch(() => {})
     )
+    getActiveExecution().then(e => {
+      if (e) setActiveExecutionId(e.id)
+    }).catch(() => {})
   }, [account])
 
   function handleImageFiles(e: ChangeEvent<HTMLInputElement>) {
@@ -92,6 +98,25 @@ export default function TourDetailPage() {
     }
   }
 
+  async function handleStartTour() {
+    if (!tour) return
+    setStartError('')
+    setStartLoading(true)
+    try {
+      const pos = await getMyPosition()
+      if (!pos) {
+        setStartError('No position found. Please set your position in the Simulator first.')
+        return
+      }
+      const execution = await startTourExecution(tour.id, pos.latitude, pos.longitude)
+      navigate(`/executions/${execution.id}/active`)
+    } catch (e: any) {
+      setStartError(e?.error ?? 'Could not start tour')
+    } finally {
+      setStartLoading(false)
+    }
+  }
+
   async function handleAddToCart() {
     if (!tour) return
     setCartError('')
@@ -113,6 +138,8 @@ export default function TourDetailPage() {
   const isPurchased = isTourist && purchasedIds.includes(tour.id)
   const isInCart = isTourist && cartTourIds.includes(tour.id)
   const canAddToCart = isTourist && tour.status === 'PUBLISHED' && !isPurchased && !isInCart
+  const canStartTour = isTourist && isPurchased && (tour.status === 'PUBLISHED' || tour.status === 'ARCHIVED') && !activeExecutionId
+  const hasActiveSession = isTourist && !!activeExecutionId
   const canReview = account?.role === 'tourist'
 
   return (
@@ -142,6 +169,17 @@ export default function TourDetailPage() {
           )}
         </div>
         {cartError && <p className="error" style={{ margin: '4px 0 8px' }}>{cartError}</p>}
+        {startError && <p className="error" style={{ margin: '4px 0 8px' }}>{startError}</p>}
+        {canStartTour && (
+          <button onClick={handleStartTour} disabled={startLoading} style={{ marginBottom: 8 }}>
+            {startLoading ? 'Starting...' : 'Start Tour'}
+          </button>
+        )}
+        {hasActiveSession && (
+          <button className="secondary" onClick={() => navigate(`/executions/${activeExecutionId}/active`)} style={{ marginBottom: 8 }}>
+            Resume Active Tour
+          </button>
+        )}
 
         <p className="blog-meta">
           {tour.difficulty}

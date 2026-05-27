@@ -2,6 +2,7 @@ package com.microtourist.tours.controller;
 
 import com.microtourist.tours.model.Review;
 import com.microtourist.tours.model.Tour;
+import com.microtourist.tours.model.TourExecution;
 import com.microtourist.tours.model.Waypoint;
 import com.microtourist.tours.saga.ArchiveSagaOrchestrator;
 import com.microtourist.tours.service.TourService;
@@ -180,5 +181,65 @@ public class TourController {
         List<String> tourIds = (List<String>) body.get("tourIds");
         tourService.recordPurchases(touristId, tourIds);
         return ResponseEntity.ok(Map.of("message", "purchases recorded"));
+    }
+
+    @PostMapping("/{tourId}/start")
+    public ResponseEntity<?> startExecution(@PathVariable String tourId, @RequestBody Map<String, Double> body, HttpServletRequest req) {
+        TokenUtil.TokenPayload user = auth(req);
+        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "authentication required"));
+        if (!"tourist".equals(user.role())) return ResponseEntity.status(403).body(Map.of("error", "only tourists can start tours"));
+        Double lat = body.get("latitude");
+        Double lng = body.get("longitude");
+        if (lat == null || lng == null) return ResponseEntity.badRequest().body(Map.of("error", "latitude and longitude required"));
+        try {
+            return ResponseEntity.status(201).body(tourService.startExecution(user.userId(), tourId, lat, lng));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/executions/{id}/check-position")
+    public ResponseEntity<?> checkPosition(@PathVariable String id, @RequestBody Map<String, Double> body, HttpServletRequest req) {
+        TokenUtil.TokenPayload user = auth(req);
+        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "authentication required"));
+        Double lat = body.get("latitude");
+        Double lng = body.get("longitude");
+        if (lat == null || lng == null) return ResponseEntity.badRequest().body(Map.of("error", "latitude and longitude required"));
+        try {
+            return ResponseEntity.ok(tourService.checkPosition(id, user.userId(), lat, lng));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/executions/{id}/complete")
+    public ResponseEntity<?> completeExecution(@PathVariable String id, HttpServletRequest req) {
+        TokenUtil.TokenPayload user = auth(req);
+        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "authentication required"));
+        try {
+            return ResponseEntity.ok(tourService.completeExecution(id, user.userId()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/executions/{id}/abandon")
+    public ResponseEntity<?> abandonExecution(@PathVariable String id, HttpServletRequest req) {
+        TokenUtil.TokenPayload user = auth(req);
+        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "authentication required"));
+        try {
+            return ResponseEntity.ok(tourService.abandonExecution(id, user.userId()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/executions/active")
+    public ResponseEntity<?> getActiveExecution(HttpServletRequest req) {
+        TokenUtil.TokenPayload user = auth(req);
+        if (user == null) return ResponseEntity.status(401).body(Map.of("error", "authentication required"));
+        return tourService.getActiveExecution(user.userId())
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElse(ResponseEntity.ok(Map.of()));
     }
 }
