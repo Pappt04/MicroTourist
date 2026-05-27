@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -52,6 +53,8 @@ func main() {
 	// Stakeholders RPC routes
 	mux.HandleFunc("POST /register", handleRegister(stakeholdersClient))
 	mux.HandleFunc("POST /login", handleLogin(stakeholdersClient))
+	mux.HandleFunc("GET /profile/{id}", handleGetProfile(stakeholdersClient))
+	mux.HandleFunc("GET /admin/accounts", handleGetAllAccounts(stakeholdersClient))
 
 	// Tours RPC routes (GET → gRPC)
 	mux.HandleFunc("GET /tours/published", handleGetPublishedTours(toursClient))
@@ -160,6 +163,68 @@ func handleLogin(client pb.StakeholdersServiceClient) http.HandlerFunc {
 				"is_blocked": resp.IsBlocked,
 			},
 		})
+	}
+}
+
+func handleGetProfile(client pb.StakeholdersServiceClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idStr := r.PathValue("id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			writeJSON(w, 400, map[string]string{"error": "invalid account id"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+		defer cancel()
+
+		resp, err := client.GetProfile(ctx, &pb.GetProfileRequest{AccountId: id})
+		if err != nil {
+			writeJSON(w, 500, map[string]string{"error": "gRPC call failed: " + err.Error()})
+			return
+		}
+		if resp.Error != "" {
+			writeJSON(w, 404, map[string]string{"error": resp.Error})
+			return
+		}
+
+		writeJSON(w, 200, map[string]any{
+			"account_id":      resp.AccountId,
+			"first_name":      resp.FirstName,
+			"last_name":       resp.LastName,
+			"profile_picture": resp.ProfilePicture,
+			"bio":             resp.Bio,
+			"motto":           resp.Motto,
+		})
+	}
+}
+
+func handleGetAllAccounts(client pb.StakeholdersServiceClient) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+		defer cancel()
+
+		resp, err := client.GetAllAccounts(ctx, &pb.GetAllAccountsRequest{})
+		if err != nil {
+			writeJSON(w, 500, map[string]string{"error": "gRPC call failed: " + err.Error()})
+			return
+		}
+		if resp.Error != "" {
+			writeJSON(w, 500, map[string]string{"error": resp.Error})
+			return
+		}
+
+		accounts := make([]map[string]any, 0, len(resp.Accounts))
+		for _, a := range resp.Accounts {
+			accounts = append(accounts, map[string]any{
+				"id":         a.Id,
+				"username":   a.Username,
+				"email":      a.Email,
+				"role":       a.Role,
+				"is_blocked": a.IsBlocked,
+			})
+		}
+		writeJSON(w, 200, accounts)
 	}
 }
 

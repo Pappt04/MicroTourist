@@ -5,8 +5,10 @@ package stakeholders;
 option go_package = "./pb";
 
 service StakeholdersService {
-    rpc Register (RegisterRequest)  returns (RegisterResponse);
-    rpc Login    (LoginRequest)     returns (LoginResponse);
+    rpc Register       (RegisterRequest)       returns (RegisterResponse);
+    rpc Login          (LoginRequest)          returns (LoginResponse);
+    rpc GetProfile     (GetProfileRequest)     returns (ProfileResponse);
+    rpc GetAllAccounts (GetAllAccountsRequest) returns (GetAllAccountsResponse);
 }
 
 message RegisterRequest {
@@ -38,4 +40,33 @@ message LoginResponse {
     string role       = 5;
     bool   is_blocked = 6;
     string error      = 7;
+}
+
+message GetProfileRequest {
+    int64 account_id = 1;
+}
+
+message ProfileResponse {
+    int64  account_id       = 1;
+    string first_name       = 2;
+    string last_name        = 3;
+    string profile_picture  = 4;
+    string bio              = 5;
+    string motto            = 6;
+    string error            = 7;
+}
+
+message GetAllAccountsRequest {}
+
+message AccountMessage {
+    int64  id         = 1;
+    string username   = 2;
+    string email      = 3;
+    string role       = 4;
+    bool   is_blocked = 5;
+}
+
+message GetAllAccountsResponse {
+    repeated AccountMessage accounts = 1;
+    string                  error    = 2;
 }
