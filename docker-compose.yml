@@ -177,6 +177,21 @@ services:
       - microtourist
     restart: unless-stopped
 
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /cgroup:/cgroup:ro
+    ports:
+      - "8090:8080"
+    networks:
+      - microtourist
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus:latest
     volumes:
@@ -192,6 +207,7 @@ services:
       - "9095:9090"
     depends_on:
       - node-exporter
+      - cadvisor
     restart: unless-stopped
 
   grafana:
