@@ -35,6 +35,11 @@ services:
     depends_on:
       stakeholders_db:
         condition: service_healthy
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-external-labels: "service=stakeholders,env=dev"
 
   # ── RPC Gateway (Go) — translates HTTP to gRPC for stakeholders, tours, purchase ─
   rpc-gateway:
@@ -81,6 +86,11 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-external-labels: "service=blog,env=dev"
 
   # ── Purchase (Java + PostgreSQL) ──────────────────────────────────────────
   purchase_db:
@@ -114,6 +124,11 @@ services:
     depends_on:
       purchase_db:
         condition: service_healthy
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-external-labels: "service=purchase,env=dev"
 
   # ── Followers (Java + Neo4j) ──────────────────────────────────────────────
   neo4j:
@@ -142,6 +157,11 @@ services:
     depends_on:
       neo4j:
         condition: service_healthy
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-external-labels: "service=followers,env=dev"
 
   # ── Tours (Java + MongoDB) ────────────────────────────────────────────────
   tours:
@@ -157,6 +177,24 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-external-labels: "service=tours,env=dev"
+
+  # ── Monitoring: Loki (log aggregation) ───────────────────────────────────
+  loki:
+    image: grafana/loki:3.0.0
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - microtourist
+    restart: unless-stopped
 
   # ── Monitoring: Node Exporter + Prometheus + Grafana ─────────────────────
   node-exporter:
@@ -226,6 +264,7 @@ services:
       - microtourist
     depends_on:
       - prometheus
+      - loki
     restart: unless-stopped
 
   # ── Frontend (React + Nginx) ──────────────────────────────────────────────
@@ -265,3 +304,4 @@ volumes:
   mongodata:
   prometheus_data:
   grafana_data:
+  loki_data:
