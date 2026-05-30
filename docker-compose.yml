@@ -53,11 +53,13 @@ services:
       PURCHASE_GRPC_ADDR: purchase:9092
       BLOG_GRPC_ADDR: blog:50051
       TOKEN_SECRET: ${TOKEN_SECRET:-changeme}
+      OTEL_EXPORTER_OTLP_ENDPOINT: tempo:4317
     depends_on:
       - stakeholders
       - tours
       - purchase
       - blog
+      - tempo
 
   # ── Blog (Python + MongoDB) ───────────────────────────────────────────────
   mongo:
@@ -173,15 +175,33 @@ services:
       MONGO_DB: ${TOURS_MONGO_DB:-microtourist_tours}
       TOKEN_SECRET: ${TOKEN_SECRET:-changeme}
       PURCHASE_SERVICE_URL: http://purchase:8082
+      OTEL_SERVICE_NAME: tours
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
     restart: on-failure
     depends_on:
       mongo:
         condition: service_healthy
+      tempo:
+        condition: service_started
     logging:
       driver: loki
       options:
         loki-url: "http://localhost:3100/loki/api/v1/push"
         loki-external-labels: "service=tours,env=dev"
+
+  # ── Monitoring: Tempo (distributed tracing) ──────────────────────────────
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./monitoring/tempo.yml:/etc/tempo.yaml:ro
+      - tempo_data:/var/tempo
+    ports:
+      - "3200:3200"
+    networks:
+      - microtourist
+    restart: unless-stopped
 
   # ── Monitoring: Loki (log aggregation) ───────────────────────────────────
   loki:
@@ -223,7 +243,7 @@ services:
       - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
-      - /cgroup:/cgroup:ro
+      - /sys/fs/cgroup:/cgroup:ro
     ports:
       - "8090:8080"
     networks:
@@ -305,3 +325,4 @@ volumes:
   prometheus_data:
   grafana_data:
   loki_data:
+  tempo_data:
