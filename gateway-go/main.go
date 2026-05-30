@@ -15,37 +15,90 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	pb "microtourist/gateway-go/pb"
 )
 
+func initTracer(ctx context.Context) func(context.Context) error {
+	endpoint := getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317")
+
+	exporter, err := otlptracegrpc.New(ctx,
+		otlptracegrpc.WithEndpoint(endpoint),
+		otlptracegrpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Printf("warning: cannot create OTLP exporter: %v", err)
+		return func(context.Context) error { return nil }
+	}
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName("rpc-gateway"),
+		)),
+	)
+
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
+
+	return tp.Shutdown
+}
+
 func main() {
+	ctx := context.Background()
+	shutdown := initTracer(ctx)
+	defer shutdown(ctx)
+
 	stakeholdersAddr := getEnv("STAKEHOLDERS_GRPC_ADDR", "localhost:9090")
 	toursAddr := getEnv("TOURS_GRPC_ADDR", "localhost:9091")
 	purchaseAddr := getEnv("PURCHASE_GRPC_ADDR", "localhost:9092")
 	blogAddr := getEnv("BLOG_GRPC_ADDR", "localhost:50051")
 	toursHTTP := getEnv("TOURS_HTTP_URL", "http://localhost:8084")
 
-	stakeholdersConn, err := grpc.Dial(stakeholdersAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	stakeholdersConn, err := grpc.Dial(stakeholdersAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	)
 	if err != nil {
 		log.Fatalf("cannot connect to stakeholders gRPC: %v", err)
 	}
 	defer stakeholdersConn.Close()
 
-	toursConn, err := grpc.Dial(toursAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	toursConn, err := grpc.Dial(toursAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	)
 	if err != nil {
 		log.Fatalf("cannot connect to tours gRPC: %v", err)
 	}
 	defer toursConn.Close()
 
-	purchaseConn, err := grpc.Dial(purchaseAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	purchaseConn, err := grpc.Dial(purchaseAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	)
 	if err != nil {
 		log.Fatalf("cannot connect to purchase gRPC: %v", err)
 	}
 	defer purchaseConn.Close()
 
-	blogConn, err := grpc.Dial(blogAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	blogConn, err := grpc.Dial(blogAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	)
 	if err != nil {
 		log.Fatalf("cannot connect to blog gRPC: %v", err)
 	}
@@ -81,8 +134,10 @@ func main() {
 	mux.HandleFunc("GET /blogs", handleGetBlogs(blogClient))
 	mux.HandleFunc("GET /blogs/{id}", handleGetBlogById(blogClient))
 
+	handler := otelhttp.NewHandler(logMiddleware(mux), "rpc-gateway")
+
 	log.Println("rpc-gateway listening on :8086")
-	if err := http.ListenAndServe(":8086", logMiddleware(mux)); err != nil {
+	if err := http.ListenAndServe(":8086", handler); err != nil {
 		log.Fatalf("server error: %v", err)
 	}
 }
